@@ -4,7 +4,6 @@ const axios = require('axios');
 const path = require('path');
 const fs = require('fs');
 const sharp = require('sharp');
-
 const app = express();
 const PORT = process.env.PORT || 3000;
 

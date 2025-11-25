@@ -49,28 +49,26 @@ function createGeminiRequest(objectImagePath, backgroundImagePath, promptText, q
   return {
     contents: [
       {
+        role: "user",
         parts: [
           { text: promptText },
+
           {
-            inline_data: {
-              mime_type: "image/png",
+            inlineData: {
+              mimeType: "image/jpeg",
               data: objectImageB64
             }
           },
+
           {
-            inline_data: {
-              mime_type: "image/jpeg",
+            inlineData: {
+              mimeType: "image/jpeg",
               data: backgroundImageB64
             }
           }
         ]
       }
-    ],
-    generationConfig: {
-      temperature: 0.1,
-      topP: 0.95,
-      maxOutputTokens: 2048,
-    }
+    ]
   };
 }
 

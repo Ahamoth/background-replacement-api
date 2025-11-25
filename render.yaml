@@ -1,1 +1,10 @@
-
+services:
+  - type: web
+    name: gemini-image-composer
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: GEMINI_API_KEY
+        value: AIzaSyCkeDnvwpoxquYUKxCCXHO87UQO0U8ICwc

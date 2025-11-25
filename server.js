@@ -75,7 +75,7 @@ app.post('/generate', upload.fields([
     console.log('🏞️ Фон:', backgroundImage.filename);
     console.log('🎯 Качество:', quality);
 
-    const API_KEY = process.env.GEMINI_API_KEY || "AIzaSyCkeDnvwpoxquYUKxCCXHO87UQO0U8ICwc";
+    const API_KEY = process.env.GEMINI_API_KEY;
 
     // Этап 1: Генерация промта с помощью Gemini 2.5 Flash
     const flashUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;

@@ -108,7 +108,7 @@ app.post('/generate', upload.fields([
     console.log('🏞️ Фон:', backgroundImage.filename);
     console.log('🎯 Качество:', quality);
 
-    const API_KEY = process.env.GEMINI_API_KEY || "AIzaSyCkeDnvwpoxquYUKxCCXHO87UQO0U8ICwc";
+    const API_KEY = process.env.GEMINI_API_KEY;
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent?key=${API_KEY}`;
 
     const defaultPrompt = `

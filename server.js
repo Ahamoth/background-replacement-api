@@ -89,26 +89,23 @@ app.post('/generate', upload.fields([
 
     console.log('🚀 Начинаем генерацию...');
 
-    // Конфигурация строго по формату из примера
-    const tools = [
-      {
-        googleSearch: {}
-      },
-    ];
+    // ПРАВИЛЬНАЯ конфигурация согласно документации
+    const tools = [];
 
     const config = {
       thinkingConfig: {
-        thinkingLevel: thinkingLevel || 'HIGH',
+        thinkingLevel: thinkingLevel === 'LOW' ? 'LOW' : 'HIGH', // Только HIGH или LOW
       },
-      mediaResolution: mediaResolution || 'MEDIA_RESOLUTION_HIGH',
+      // mediaResolution должен быть только MEDIUM или HIGH, LOW не поддерживается
+      mediaResolution: mediaResolution === 'MEDIA_RESOLUTION_MEDIUM' ? 'MEDIA_RESOLUTION_MEDIUM' : 'MEDIA_RESOLUTION_HIGH',
       tools,
     };
 
-    const model = 'gemini-3-pro-preview';
+    const model = 'gemini-1.5-flash'; // Используем стабильную модель для изображений
 
     const finalPrompt = prompt || "Create a photorealistic composite by integrating the object from first image into the background from second image with realistic lighting and shadows.";
 
-    // Подготовка содержимого строго по формату из примера
+    // Подготовка содержимого
     const contents = [
       {
         role: 'user',
@@ -135,8 +132,8 @@ app.post('/generate', upload.fields([
     console.log('📡 Отправляем запрос к Gemini API...');
     console.log('⚙️ Конфигурация:', JSON.stringify(config, null, 2));
     
-    // Используем generateContentStream как в примере
-    const response = await ai.models.generateContentStream({
+    // Используем обычный generateContent вместо stream для изображений
+    const response = await ai.models.generateContent({
       model,
       config,
       contents,
@@ -144,55 +141,54 @@ app.post('/generate', upload.fields([
 
     console.log('✅ Запрос успешен!');
 
-    // Обработка stream ответа
-    let fullText = '';
-    let imageData = null;
-
-    for await (const chunk of response) {
-      if (chunk.text) {
-        fullText += chunk.text;
-      }
-      
-      // Проверяем наличие inlineData (изображение) в кандидатах
-      if (chunk.candidates && chunk.candidates.length > 0) {
-        const candidate = chunk.candidates[0];
-        if (candidate.content && candidate.content.parts) {
-          for (const part of candidate.content.parts) {
-            if (part.inlineData) {
-              imageData = Buffer.from(part.inlineData.data, 'base64');
-              break;
+    // Обработка ответа
+    if (response.candidates && response.candidates.length > 0) {
+      const candidate = response.candidates[0];
+      if (candidate.content && candidate.content.parts) {
+        for (const part of candidate.content.parts) {
+          if (part.inlineData) {
+            const imageData = Buffer.from(part.inlineData.data, 'base64');
+            
+            // Сохраняем результат
+            const resultDir = 'results/';
+            if (!fs.existsSync(resultDir)) {
+              fs.mkdirSync(resultDir, { recursive: true });
             }
+            
+            const timestamp = Date.now();
+            const filename = `result-${timestamp}.png`;
+            const filePath = path.join(resultDir, filename);
+            
+            await sharp(imageData)
+              .png({ quality: 100 })
+              .toFile(filePath);
+            
+            console.log(`✅ Изображение сохранено: ${filename}`);
+            
+            // Очищаем временные файлы
+            cleanupFiles([objectImage.path, backgroundImage.path]);
+            
+            return res.json({
+              success: true,
+              imageUrl: `/results/${filename}`,
+              filename: filename
+            });
           }
         }
       }
     }
-
-    if (imageData) {
-      // Сохраняем результат
-      const resultDir = 'results/';
-      if (!fs.existsSync(resultDir)) {
-        fs.mkdirSync(resultDir, { recursive: true });
+    
+    // Если нет изображения, проверяем текстовый ответ
+    let fullText = '';
+    if (response.candidates && response.candidates[0]?.content?.parts) {
+      for (const part of response.candidates[0].content.parts) {
+        if (part.text) {
+          fullText += part.text;
+        }
       }
-      
-      const timestamp = Date.now();
-      const filename = `result-${timestamp}.png`;
-      const filePath = path.join(resultDir, filename);
-      
-      await sharp(imageData)
-        .png({ quality: 100 })
-        .toFile(filePath);
-      
-      console.log(`✅ Изображение сохранено: ${filename}`);
-      
-      // Очищаем временные файлы
-      cleanupFiles([objectImage.path, backgroundImage.path]);
-      
-      return res.json({
-        success: true,
-        imageUrl: `/results/${filename}`,
-        filename: filename
-      });
-    } else if (fullText) {
+    }
+    
+    if (fullText) {
       console.log('📝 Текстовый ответ:', fullText);
       return res.status(500).json({ 
         error: `API вернул текст вместо изображения: ${fullText.substring(0, 100)}...` 
@@ -203,6 +199,7 @@ app.post('/generate', upload.fields([
     
   } catch (error) {
     console.error('❌ Ошибка:', error.message);
+    console.error('Stack:', error.stack);
     
     // Очищаем файлы в случае ошибки
     if (objectImage || backgroundImage) {

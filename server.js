@@ -133,11 +133,10 @@ app.post("/generate", upload.fields([
         ];
 
         const generationConfig = {
-            temperature: 0.7,
-            topP: 0.9,
-            mediaResolution: mediaResolution,
-            thinking: thinkingLevel
-        };
+    temperature: 0.7,
+    topP: 0.9,
+    mediaResolution: mediaResolution
+};
 
         // -------------------------
         // Send request

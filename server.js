@@ -1,6 +1,5 @@
 // ==========================================================
-//  SERVER.JS — Полностью готовая версия для gemini-2.0-flash
-//  Поддерживает: Image Composition + 1K / 2K / 4K
+//  SERVER.JS — Полная версия для gemini-3-pro-image-preview
 // ==========================================================
 
 const express = require("express");
@@ -13,21 +12,18 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ------------------------------
-// ИНИЦИАЛИЗАЦИЯ GEMINI
-// ------------------------------
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// ------------------------------
-// MIDDLEWARE
-// ------------------------------
+// --------------------------------------------
+// STATIC + FORM
+// --------------------------------------------
 app.use(express.static("public"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ------------------------------
-// MULTER (UPLOADS)
-// ------------------------------
+// --------------------------------------------
+// File Upload
+// --------------------------------------------
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         const dir = "uploads/";
@@ -35,56 +31,48 @@ const storage = multer.diskStorage({
         cb(null, dir);
     },
     filename: (req, file, cb) => {
-        cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}-${file.originalname}`);
+        cb(null, `${Date.now()}-${Math.random()}-${file.originalname}`);
     }
 });
 
 const upload = multer({ storage });
 
-// ------------------------------
-// HELPERS
-// ------------------------------
-function fileToBase64(filePath) {
-    return fs.readFileSync(filePath).toString("base64");
-}
+// --------------------------------------------
+// Utilities
+// --------------------------------------------
+const fileToBase64 = file => fs.readFileSync(file).toString("base64");
 
-function getMimeType(filePath) {
-    const ext = path.extname(filePath).toLowerCase();
+const getMimeType = file => {
+    const ext = path.extname(file).toLowerCase();
     const map = {
         ".jpg": "image/jpeg",
         ".jpeg": "image/jpeg",
         ".png": "image/png",
-        ".webp": "image/webp",
-        ".gif": "image/gif"
+        ".webp": "image/webp"
     };
     return map[ext] || "image/jpeg";
+};
+
+const resolutions = {
+    "1k": { w: 1024, h: 1024 },
+    "2k": { w: 2048, h: 2048 },
+    "4k": { w: 4096, h: 4096 }
+};
+
+function cleanup(files) {
+    files.forEach(f => f && fs.existsSync(f) && fs.unlinkSync(f));
 }
 
-function getResolution(quality) {
-    const map = {
-        "1k": { width: 1024, height: 1024 },
-        "2k": { width: 2048, height: 2048 },
-        "4k": { width: 4096, height: 4096 }
-    };
-    return map[quality] || map["2k"];
-}
-
-function cleanupFiles(paths) {
-    paths.forEach(p => {
-        if (p && fs.existsSync(p)) fs.unlinkSync(p);
-    });
-}
-
-// ------------------------------
-// ROUTES
-// ------------------------------
+// --------------------------------------------
+// MAIN PAGE
+// --------------------------------------------
 app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// ------------------------------
-// MAIN GENERATION ENDPOINT
-// ------------------------------
+// --------------------------------------------
+// GENERATION ENDPOINT
+// --------------------------------------------
 app.post(
     "/generate",
     upload.fields([
@@ -92,30 +80,25 @@ app.post(
         { name: "backgroundImage", maxCount: 1 }
     ]),
     async (req, res) => {
-        let objImg = null;
-        let bgImg = null;
+
+        let obj = null, bg = null;
 
         try {
-            const { prompt, mediaResolution, quality } = req.body;
+            const { prompt, imageSize, quality } = req.body;
 
-            // Validate
             if (!req.files?.objectImage || !req.files?.backgroundImage) {
-                return res.status(400).json({ error: "Оба изображения обязательны" });
+                return res.status(400).json({ error: "Загрузите оба изображения" });
             }
 
-            objImg = req.files.objectImage[0];
-            bgImg = req.files.backgroundImage[0];
+            obj = req.files.objectImage[0];
+            bg = req.files.backgroundImage[0];
 
-            // --------------------------
-            // MODEL: GEMINI-2.0-FLASH
-            // --------------------------
+            // MODEL
             const model = genAI.getGenerativeModel({
-                model: "gemini-2.0-flash"
+                model: "gemini-3-pro-image-preview"
             });
 
-            // --------------------------
-            // INPUT CONTENTS
-            // --------------------------
+            // CONTENT
             const contents = [
                 {
                     role: "user",
@@ -123,39 +106,38 @@ app.post(
                         {
                             text:
                                 prompt ||
-                                `Integrate the object image into the background image 
-                                with perfect lighting, shadows, perspective, soft edges 
-                                and full photorealism. Return ONLY final composite image.`
+                                `Composite the first image (object) into the second image (background).
+                                 Make perfect photorealism, shadow matching, lighting alignment, 
+                                 physical perspective, soft edges, realistic color grading.
+                                 Output ONLY the final composite image.`
                         },
                         {
                             inlineData: {
-                                mimeType: getMimeType(objImg.path),
-                                data: fileToBase64(objImg.path)
+                                mimeType: getMimeType(obj.path),
+                                data: fileToBase64(obj.path)
                             }
                         },
                         {
                             inlineData: {
-                                mimeType: getMimeType(bgImg.path),
-                                data: fileToBase64(bgImg.path)
+                                mimeType: getMimeType(bg.path),
+                                data: fileToBase64(bg.path)
                             }
                         }
                     ]
                 }
             ];
 
-            // --------------------------
-            // GENERATION CONFIG
-            // --------------------------
+            // CONFIG
             const generationConfig = {
-                temperature: 0.7,
-                topP: 0.95,
-                mediaResolution: mediaResolution || "MEDIA_RESOLUTION_HIGH"
+                responseModalities: ["IMAGE"],
+                imageConfig: {
+                    aspectRatio: "1:1",
+                    imageSize: imageSize || "2K"
+                }
             };
 
-            // --------------------------
             // REQUEST
-            // --------------------------
-            console.log("📡 Запрос в Gemini 2.0 Flash...");
+            console.log("📡 Запрос в Gemini 3 Pro Image...");
             const result = await model.generateContent({
                 contents,
                 generationConfig
@@ -163,77 +145,57 @@ app.post(
 
             const response = result.response;
 
-            if (!response?.candidates?.length) {
-                throw new Error("Gemini не предоставил кандидатов");
+            let base64img = null;
+            for (const p of response?.candidates?.[0]?.content?.parts || []) {
+                if (p.inlineData) base64img = p.inlineData.data;
             }
 
-            // --------------------------
-            // FIND IMAGE (inlineData)
-            // --------------------------
-            let imageBase64 = null;
+            if (!base64img) throw new Error("Модель не вернула изображение");
 
-            for (const part of response.candidates[0].content.parts) {
-                if (part.inlineData) {
-                    imageBase64 = part.inlineData.data;
-                }
-            }
+            // SAVE RESULT (SHARP UPSCALE)
+            const resDir = "results/";
+            if (!fs.existsSync(resDir)) fs.mkdirSync(resDir, { recursive: true });
 
-            if (!imageBase64) {
-                throw new Error("Gemini вернул ответ без изображения");
-            }
-
-            // --------------------------
-            // SAVE RESULT (WITH UPSCALE)
-            // --------------------------
-            const resultDir = "results/";
-            if (!fs.existsSync(resultDir)) fs.mkdirSync(resultDir, { recursive: true });
-
-            const resolution = getResolution(quality || "2k");
+            const R = resolutions[quality] || resolutions["2k"];
             const filename = `result-${Date.now()}-${quality}.png`;
-            const filepath = path.join(resultDir, filename);
+            const filepath = path.join(resDir, filename);
 
-            await sharp(Buffer.from(imageBase64, "base64"))
-                .resize(resolution.width, resolution.height, {
-                    fit: "inside",
-                    withoutEnlargement: false
-                })
+            await sharp(Buffer.from(base64img, "base64"))
+                .resize(R.w, R.h, { fit: "inside", withoutEnlargement: false })
                 .png({ quality: 100 })
                 .toFile(filepath);
 
-            // CLEANUP TEMP FILES
-            cleanupFiles([objImg.path, bgImg.path]);
+            cleanup([obj.path, bg.path]);
 
-            // SUCCESS
-            res.json({
+            return res.json({
                 success: true,
                 imageUrl: `/results/${filename}`,
                 filename,
-                resolution: `${resolution.width}x${resolution.height}`
+                resolution: `${R.w}x${R.h}`
             });
-        } catch (err) {
-            console.error("❌ Ошибка:", err);
-            cleanupFiles([objImg?.path, bgImg?.path]);
-            res.status(500).json({ error: err.message });
+
+        } catch (e) {
+            console.error("🔥 Ошибка:", e);
+            cleanup([obj?.path, bg?.path]);
+            return res.status(500).json({ error: e.message });
         }
     }
 );
 
-// ------------------------------
+// --------------------------------------------
 // DOWNLOAD
-// ------------------------------
-app.get("/results/:filename", (req, res) => {
-    const file = path.join(__dirname, "results", req.params.filename);
+// --------------------------------------------
+app.get("/results/:file", (req, res) => {
+    const file = path.join(__dirname, "results", req.params.file);
     if (fs.existsSync(file)) return res.download(file);
     res.status(404).json({ error: "Файл не найден" });
 });
 
-// ------------------------------
-// START SERVER
-// ------------------------------
-["public", "uploads", "results"].forEach(dir => {
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+// --------------------------------------------
+// BOOT
+// --------------------------------------------
+["public", "uploads", "results"].forEach(d => {
+    if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
 });
 
-app.listen(PORT, () => {
-    console.log(`🚀 Сервер запущен: http://localhost:${PORT}`);
-});
+app.listen(PORT, () => console.log(`🚀 http://localhost:${PORT}`));

@@ -1,156 +1,609 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<title>Gemini 3 Pro Image Composer</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎨 Gemini AI Image Composer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-<style>
-body {
-    background: #eef1f5;
-    font-family: Arial, sans-serif;
-    padding: 40px;
-}
-.container {
-    max-width: 1100px;
-    margin: auto;
-    background: #fff;
-    padding: 25px;
-    border-radius: 12px;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.15);
-}
-h1 {
-    text-align: center;
-    margin-bottom: 20px;
-}
-.upload {
-    border: 2px dashed #4a90e2;
-    padding: 20px;
-    text-align: center;
-    cursor: pointer;
-    border-radius: 10px;
-    margin-bottom: 15px;
-}
-.preview {
-    max-width: 260px;
-    border-radius: 10px;
-    display: none;
-    margin-top: 10px;
-}
-button {
-    background: #2979ff;
-    color: #fff;
-    border: 0;
-    padding: 17px;
-    border-radius: 10px;
-    width: 100%;
-    font-size: 18px;
-    cursor: pointer;
-    margin-top: 20px;
-}
-button:hover { opacity: .9; }
-select, textarea {
-    width: 100%;
-    padding: 12px;
-    border-radius: 10px;
-    border: 2px solid #ddd;
-    margin-top: 10px;
-}
-.result-img {
-    max-width: 100%;
-    margin-top: 20px;
-    display: none;
-    border-radius: 14px;
-}
-#downloadBtn {
-    display: none;
-    background: #ff5252;
-    text-decoration: none;
-    padding: 15px;
-    color: white;
-    border-radius: 10px;
-    margin-top: 20px;
-    text-align: center;
-    font-size: 18px;
-}
-</style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #10b981;
+            --dark: #1f2937;
+            --darker: #111827;
+            --light: #f8fafc;
+            --gray: #6b7280;
+            --border: #374151;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 100%);
+            color: var(--light);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .logo {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--gray);
+            font-size: 1.1rem;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            align-items: start;
+        }
+
+        @media (max-width: 968px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .upload-section {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 2rem;
+        }
+
+        .result-section {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 2rem;
+            position: sticky;
+            top: 2rem;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .upload-area {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .upload-area {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .upload-box {
+            border: 2px dashed var(--border);
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .upload-box:hover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.7;
+        }
+
+        .upload-text {
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-subtext {
+            font-size: 0.9rem;
+            color: var(--gray);
+        }
+
+        .preview-container {
+            margin-top: 1rem;
+        }
+
+        .preview-image {
+            width: 100%;
+            max-height: 200px;
+            object-fit: contain;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            display: none;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--gray);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--light);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 120px;
+            font-family: inherit;
+        }
+
+        .select-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .generate-btn {
+            width: 100%;
+            padding: 1.25rem;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .generate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.3);
+        }
+
+        .generate-btn:active {
+            transform: translateY(0);
+        }
+
+        .generate-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result-placeholder {
+            background: rgba(255, 255, 255, 0.03);
+            border: 2px dashed var(--border);
+            border-radius: 15px;
+            padding: 3rem 2rem;
+            text-align: center;
+            color: var(--gray);
+        }
+
+        .result-image {
+            width: 100%;
+            border-radius: 15px;
+            display: none;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .download-btn {
+            display: none;
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, var(--secondary) 0%, #059669 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 12px;
+            text-align: center;
+            font-weight: 600;
+            margin-top: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 12px;
+            margin: 1rem 0;
+            display: none;
+        }
+
+        .alert-error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+        }
+
+        .alert-success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #6ee7b7;
+        }
+
+        .file-info {
+            font-size: 0.9rem;
+            color: var(--gray);
+            margin-top: 0.5rem;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .feature {
+            text-align: center;
+            padding: 1rem;
+        }
+
+        .feature-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            opacity: 0.8;
+        }
+
+        .feature-text {
+            font-size: 0.9rem;
+            color: var(--gray);
+        }
+    </style>
 </head>
-
 <body>
-<div class="container">
+    <div class="container">
+        <div class="header">
+            <div class="logo">🎨</div>
+            <h1 class="title">Gemini AI Image Composer</h1>
+            <p class="subtitle">Создавайте фотореалистичные композиции с помощью искусственного интеллекта</p>
+        </div>
 
-    <h1>🎨 Gemini 3 Pro Image Composer</h1>
+        <div class="main-content">
+            <div class="upload-section">
+                <h2 class="section-title">
+                    <span>📤</span>
+                    Загрузка изображений
+                </h2>
 
-    <div class="upload" onclick="objInput.click()">
-        Загрузить объект
-        <img id="objPreview" class="preview">
+                <div class="upload-area">
+                    <div class="upload-box" onclick="document.getElementById('objectInput').click()">
+                        <div class="upload-icon">📷</div>
+                        <div class="upload-text">Объект</div>
+                        <div class="upload-subtext">Нажмите для загрузки</div>
+                        <div class="preview-container">
+                            <img id="objectPreview" class="preview-image" alt="Предпросмотр объекта">
+                        </div>
+                    </div>
+
+                    <div class="upload-box" onclick="document.getElementById('backgroundInput').click()">
+                        <div class="upload-icon">🏞️</div>
+                        <div class="upload-text">Фон</div>
+                        <div class="upload-subtext">Нажмите для загрузки</div>
+                        <div class="preview-container">
+                            <img id="backgroundPreview" class="preview-image" alt="Предпросмотр фона">
+                        </div>
+                    </div>
+                </div>
+
+                <input type="file" id="objectInput" accept="image/*" style="display: none" onchange="previewImage(this, 'objectPreview')">
+                <input type="file" id="backgroundInput" accept="image/*" style="display: none" onchange="previewImage(this, 'backgroundPreview')">
+
+                <div class="form-group">
+                    <label class="form-label">✏️ Промт (опционально):</label>
+                    <textarea 
+                        id="prompt" 
+                        class="form-control" 
+                        placeholder="Опишите как именно интегрировать объект в фон... Например: 'Создай фотореалистичную композицию с естественным освещением и тенями'"
+                    ></textarea>
+                </div>
+
+                <div class="select-group">
+                    <div class="form-group">
+                        <label class="form-label">🎯 Качество вывода:</label>
+                        <select id="quality" class="form-control">
+                            <option value="1k">1K (1024×1024)</option>
+                            <option value="2k" selected>2K (2048×2048)</option>
+                            <option value="4k">4K (4096×4096)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">⚙️ Размер обработки:</label>
+                        <select id="imageSize" class="form-control">
+                            <option value="1K">1K</option>
+                            <option value="2K" selected>2K</option>
+                            <option value="4K">4K</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="alert alert-error" id="errorAlert"></div>
+                <div class="alert alert-success" id="successAlert"></div>
+
+                <button class="generate-btn" onclick="generateImage()" id="generateBtn">
+                    <span>🚀</span>
+                    Сгенерировать композит
+                </button>
+
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>Генерируем изображение... Это может занять до 2 минут</p>
+                </div>
+            </div>
+
+            <div class="result-section">
+                <h2 class="section-title">
+                    <span>📸</span>
+                    Результат
+                </h2>
+
+                <div class="result-placeholder" id="resultPlaceholder">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">✨</div>
+                    <p>Здесь появится сгенерированное изображение</p>
+                    <p style="font-size: 0.9rem; margin-top: 0.5rem; opacity: 0.7;">
+                        Загрузите объект и фон, затем нажмите "Сгенерировать"
+                    </p>
+                </div>
+
+                <img id="resultImage" class="result-image" alt="Результат генерации">
+                <a id="downloadBtn" class="download-btn" download>
+                    <span>💾</span>
+                    Скачать результат
+                </a>
+
+                <div class="features">
+                    <div class="feature">
+                        <div class="feature-icon">🎨</div>
+                        <div class="feature-text">Фотореалистичное качество</div>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">⚡</div>
+                        <div class="feature-text">AI-оптимизация</div>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">🖼️</div>
+                        <div class="feature-text">Высокое разрешение</div>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">🔒</div>
+                        <div class="feature-text">Безопасная обработка</div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-    <input type="file" id="objInput" accept="image/*" style="display:none"
-           onchange="preview(event,'objPreview')">
 
-    <div class="upload" onclick="bgInput.click()">
-        Загрузить фон
-        <img id="bgPreview" class="preview">
-    </div>
-    <input type="file" id="bgInput" accept="image/*" style="display:none"
-           onchange="preview(event,'bgPreview')">
+    <script>
+        function previewImage(input, previewId) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById(previewId);
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                    
+                    // Показываем информацию о файле
+                    const uploadBox = preview.closest('.upload-box');
+                    const existingInfo = uploadBox.querySelector('.file-info');
+                    if (existingInfo) {
+                        existingInfo.remove();
+                    }
+                    
+                    const fileInfo = document.createElement('div');
+                    fileInfo.className = 'file-info';
+                    fileInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+                    uploadBox.appendChild(fileInfo);
+                }
+                reader.readAsDataURL(file);
+            }
+        }
 
-    <label>Промт:</label>
-    <textarea id="prompt" placeholder="Опишите как встроить объект в фон..." rows="5"></textarea>
+        async function generateImage() {
+            const objectInput = document.getElementById('objectInput');
+            const backgroundInput = document.getElementById('backgroundInput');
+            const prompt = document.getElementById('prompt').value;
+            const quality = document.getElementById('quality').value;
+            const imageSize = document.getElementById('imageSize').value;
 
-    <label>Выходное разрешение:</label>
-    <select id="quality">
-        <option value="1k">1K</option>
-        <option value="2k" selected>2K</option>
-        <option value="4k">4K</option>
-    </select>
+            if (!objectInput.files[0] || !backgroundInput.files[0]) {
+                showAlert('Пожалуйста, загрузите оба изображения', 'error');
+                return;
+            }
 
-    <label>Размер обработки в модели:</label>
-    <select id="imageSize">
-        <option value="1K">1K</option>
-        <option value="2K" selected>2K</option>
-        <option value="4K">4K</option>
-    </select>
+            const formData = new FormData();
+            formData.append('objectImage', objectInput.files[0]);
+            formData.append('backgroundImage', backgroundInput.files[0]);
+            formData.append('prompt', prompt);
+            formData.append('quality', quality);
+            formData.append('imageSize', imageSize);
 
-    <button onclick="generate()">🚀 Сгенерировать</button>
+            showLoading(true);
+            hideAlerts();
+            hideResult();
 
-    <img id="resultImage" class="result-img">
-    <a id="downloadBtn">💾 Скачать результат</a>
+            try {
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    body: formData
+                });
 
-</div>
+                const result = await response.json();
 
-<script>
-function preview(e, id) {
-    const img = document.getElementById(id);
-    img.src = URL.createObjectURL(e.target.files[0]);
-    img.style.display = "block";
-}
+                if (result.success) {
+                    showResult(result);
+                    showAlert('✅ Изображение успешно создано!', 'success');
+                } else {
+                    showAlert(`❌ Ошибка: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showAlert(`❌ Ошибка сети: ${error.message}`, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
 
-async function generate() {
-    const obj = objInput.files[0];
-    const bg = bgInput.files[0];
-    if (!obj || !bg) return alert("Загрузите оба изображения");
+        function showResult(result) {
+            const resultImage = document.getElementById('resultImage');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const resultPlaceholder = document.getElementById('resultPlaceholder');
+            
+            resultImage.src = result.imageUrl;
+            resultImage.style.display = 'block';
+            resultPlaceholder.style.display = 'none';
+            
+            downloadBtn.href = result.imageUrl;
+            downloadBtn.download = result.filename;
+            downloadBtn.style.display = 'block';
+            downloadBtn.innerHTML = `<span>💾</span> Скачать ${result.resolution}`;
+        }
 
-    const fd = new FormData();
-    fd.append("objectImage", obj);
-    fd.append("backgroundImage", bg);
-    fd.append("prompt", document.getElementById("prompt").value);
-    fd.append("quality", document.getElementById("quality").value);
-    fd.append("imageSize", document.getElementById("imageSize").value);
+        function hideResult() {
+            document.getElementById('resultImage').style.display = 'none';
+            document.getElementById('downloadBtn').style.display = 'none';
+            document.getElementById('resultPlaceholder').style.display = 'block';
+        }
 
-    const req = await fetch("/generate", { method: "POST", body: fd });
-    const data = await req.json();
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+            document.getElementById('generateBtn').disabled = show;
+            document.getElementById('generateBtn').innerHTML = show ? 
+                '<span>⏳</span> Генерация...' : 
+                '<span>🚀</span> Сгенерировать композит';
+        }
 
-    if (!data.success) return alert("Ошибка: " + data.error);
+        function showAlert(message, type) {
+            const alert = document.getElementById(type === 'success' ? 'successAlert' : 'errorAlert');
+            alert.textContent = message;
+            alert.style.display = 'block';
+            
+            // Автоматически скрыть через 5 секунд
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 5000);
+        }
 
-    resultImage.src = data.imageUrl;
-    resultImage.style.display = "block";
+        function hideAlerts() {
+            document.getElementById('successAlert').style.display = 'none';
+            document.getElementById('errorAlert').style.display = 'none';
+        }
 
-    downloadBtn.href = data.imageUrl;
-    downloadBtn.download = data.filename;
-    downloadBtn.style.display = "block";
-}
-</script>
+        // Drag and drop functionality
+        document.querySelectorAll('.upload-box').forEach(box => {
+            box.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                box.style.borderColor = 'var(--primary)';
+                box.style.background = 'rgba(99, 102, 241, 0.1)';
+            });
 
+            box.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                box.style.borderColor = 'var(--border)';
+                box.style.background = 'rgba(255, 255, 255, 0.02)';
+            });
+
+            box.addEventListener('drop', (e) => {
+                e.preventDefault();
+                box.style.borderColor = 'var(--border)';
+                box.style.background = 'rgba(255, 255, 255, 0.02)';
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    const input = box.querySelector('.upload-icon').textContent === '📷' ? 
+                                document.getElementById('objectInput') : 
+                                document.getElementById('backgroundInput');
+                    input.files = files;
+                    const event = new Event('change');
+                    input.dispatchEvent(event);
+                }
+            });
+        });
+    </script>
 </body>
 </html>

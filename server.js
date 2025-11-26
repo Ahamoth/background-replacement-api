@@ -4,6 +4,7 @@ const axios = require('axios');
 const path = require('path');
 const fs = require('fs');
 const sharp = require('sharp');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -244,6 +245,95 @@ app.get('/results/:filename', (req, res) => {
     res.download(filePath);
   } else {
     res.status(404).json({ error: 'Файл не найден' });
+  }
+});
+
+// Маршрут для быстрой генерации
+app.post('/quick-generate', upload.fields([
+  { name: 'objectImage', maxCount: 1 },
+  { name: 'backgroundImage', maxCount: 1 }
+]), async (req, res) => {
+  try {
+    const { quality } = req.body;
+    const objectImage = req.files['objectImage'][0];
+    const backgroundImage = req.files['backgroundImage'][0];
+
+    const simplePrompt = "Put the object from first image into second image with realistic lighting and shadows. Make it photorealistic with perfect shadows and lighting matching.";
+
+    const API_KEY = process.env.GEMINI_API_KEY;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent?key=${API_KEY}`;
+
+    const requestBody = createGeminiRequest(
+      objectImage.path,
+      backgroundImage.path,
+      simplePrompt,
+      quality
+    );
+
+    const response = await axios.post(url, requestBody, { 
+      timeout: 120000 
+    });
+
+    if (response.status === 200) {
+      const result = response.data;
+      
+      if (result.candidates && result.candidates.length > 0) {
+        const candidate = result.candidates[0];
+        if (candidate.content && candidate.content.parts) {
+          for (const part of candidate.content.parts) {
+            if (part.inlineData) {
+              const imageData = Buffer.from(part.inlineData.data, 'base64');
+              
+              const resultDir = 'results/';
+              if (!fs.existsSync(resultDir)) {
+                fs.mkdirSync(resultDir);
+              }
+              
+              const timestamp = Date.now();
+              const resolution = getResolution(quality);
+              const filename = `quick-result-${timestamp}-${quality}.png`;
+              const filePath = path.join(resultDir, filename);
+              
+              await sharp(imageData)
+                .resize(resolution.width, resolution.height, {
+                  fit: 'inside',
+                  withoutEnlargement: true
+                })
+                .png({ quality: 100 })
+                .toFile(filePath);
+              
+              // Очищаем временные файлы
+              fs.unlinkSync(objectImage.path);
+              fs.unlinkSync(backgroundImage.path);
+              
+              return res.json({
+                success: true,
+                imageUrl: `/results/${filename}`,
+                filename: filename,
+                resolution: `${resolution.width}x${resolution.height}`
+              });
+            }
+          }
+        }
+      }
+    }
+    
+    return res.status(500).json({ error: 'Ошибка генерации' });
+    
+  } catch (error) {
+    console.error('❌ Ошибка быстрой генерации:', error);
+    
+    if (req.files) {
+      Object.values(req.files).forEach(fileArray => {
+        fileArray.forEach(file => {
+          if (fs.existsSync(file.path)) {
+            fs.unlinkSync(file.path);
+          }
+        });
+      });
+    }
+    
+    return res.status(500).json({ error: error.message });
   }
 });
 

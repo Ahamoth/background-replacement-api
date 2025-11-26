@@ -74,7 +74,7 @@ function getConfig(quality) {
   const qualityConfigs = {
     '1k': {
       thinkingConfig: {
-        thinkingLevel: 'LOW',
+        thinkingLevel: 'MEDIUM',
       },
       mediaResolution: 'MEDIA_RESOLUTION_LOW',
     },
@@ -82,7 +82,7 @@ function getConfig(quality) {
       thinkingConfig: {
         thinkingLevel: 'HIGH',
       },
-      mediaResolution: 'MEDIA_RESOLUTION_MEDIUM',
+      mediaResolution: 'MEDIA_RESOLUTION_HIGH',
     },
     '4k': {
       thinkingConfig: {
@@ -107,7 +107,12 @@ app.post('/generate', upload.fields([
   let objectImage, backgroundImage;
   
   try {
+    // Правильно читаем данные из FormData
     const { prompt, quality = '2k' } = req.body;
+    
+    console.log('📦 Полученные данные:');
+    console.log('   prompt:', prompt);
+    console.log('   quality:', quality);
     
     // Проверка наличия файлов
     if (!req.files || !req.files['objectImage'] || !req.files['backgroundImage']) {
@@ -150,6 +155,8 @@ Return ONLY the final composite image with maximum realism and no text descripti
     `;
 
     const finalPrompt = prompt || defaultPrompt;
+
+    console.log('📝 Используется промт:', finalPrompt.substring(0, 200) + '...');
 
     // Подготовка содержимого
     const contents = [
@@ -288,7 +295,10 @@ app.post('/quick-generate', upload.fields([
   let objectImage, backgroundImage;
   
   try {
+    // Правильно читаем данные из FormData
     const { quality = '2k' } = req.body;
+    
+    console.log('⚡ Быстрая генерация - качество:', quality);
     
     if (!req.files || !req.files['objectImage'] || !req.files['backgroundImage']) {
       return res.status(400).json({ error: 'Оба изображения обязательны' });

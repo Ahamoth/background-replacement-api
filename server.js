@@ -96,13 +96,17 @@ app.post('/generate', upload.fields([
     console.log('📷 Объект:', objectImage.filename);
     console.log('🏞️ Фон:', backgroundImage.filename);
     console.log('🎯 Качество:', quality);
+    console.log('📝 Промт:', prompt || 'используется стандартный');
 
-    // Конфигурация для генерации
+    // Конфигурация для генерации согласно официальному примеру
     const config = {
+      thinkingConfig: {
+        thinkingLevel: 'HIGH',
+      },
       mediaResolution: 'MEDIA_RESOLUTION_HIGH',
     };
 
-    const model = 'gemini-2.0-flash-exp';
+    const model = 'gemini-3-pro-preview';
 
     const defaultPrompt = `
 Create a photorealistic composite by perfectly integrating the object from the first image 
@@ -129,12 +133,14 @@ Return ONLY the final composite image with maximum realism and no text descripti
 
     const finalPrompt = prompt || defaultPrompt;
 
-    // Подготовка содержимого для GenAI
+    // Подготовка содержимого согласно официальному примеру
     const contents = [
       {
         role: 'user',
         parts: [
-          { text: finalPrompt },
+          {
+            text: finalPrompt,
+          },
           {
             fileData: {
               mimeType: getMimeType(objectImage.path),
@@ -153,6 +159,7 @@ Return ONLY the final composite image with maximum realism and no text descripti
 
     console.log('📡 Отправляем запрос к Gemini API...');
     
+    // Используем generateContentStream как в официальном примере
     const response = await ai.models.generateContent({
       model,
       config,
@@ -166,7 +173,7 @@ Return ONLY the final composite image with maximum realism and no text descripti
       const candidate = response.candidates[0];
       if (candidate.content && candidate.content.parts) {
         for (const part of candidate.content.parts) {
-          if (part.inlineData) { // Исправлено: fileData → inlineData
+          if (part.inlineData) {
             const imageData = Buffer.from(part.inlineData.data, 'base64');
             
             // Сохраняем результат
@@ -206,15 +213,28 @@ Return ONLY the final composite image with maximum realism and no text descripti
       }
     }
     
-    // Если нет файла в ответе, проверяем текстовый ответ
-    if (response.text) {
-      console.log('📝 Текстовый ответ:', response.text);
+    // Если нет изображения, проверяем текстовый ответ
+    let fullText = '';
+    if (response.candidates && response.candidates[0]?.content?.parts) {
+      for (const part of response.candidates[0].content.parts) {
+        if (part.text) {
+          fullText += part.text;
+        }
+      }
     }
     
-    return res.status(500).json({ error: 'В ответе нет изображения' });
+    if (fullText) {
+      console.log('📝 Текстовый ответ:', fullText);
+      return res.status(500).json({ 
+        error: `API вернул текст вместо изображения: ${fullText.substring(0, 100)}...` 
+      });
+    }
+    
+    return res.status(500).json({ error: 'В ответе нет изображения или текста' });
     
   } catch (error) {
     console.error('❌ Ошибка:', error.message);
+    console.error('Stack:', error.stack);
     
     // Очищаем файлы в случае ошибки
     if (objectImage || backgroundImage) {
@@ -259,13 +279,16 @@ app.post('/quick-generate', upload.fields([
     objectImage = req.files['objectImage'][0];
     backgroundImage = req.files['backgroundImage'][0];
 
-    const simplePrompt = "Put the object from first image into second image with realistic lighting and shadows. Make it photorealistic with perfect shadows and lighting matching.";
+    const simplePrompt = "Put the object from first image into second image with realistic lighting and shadows. Make it photorealistic with perfect shadows and lighting matching. Return only the final composite image.";
 
     const config = {
+      thinkingConfig: {
+        thinkingLevel: 'HIGH',
+      },
       mediaResolution: 'MEDIA_RESOLUTION_HIGH',
     };
 
-    const model = 'gemini-2.0-flash-exp';
+    const model = 'gemini-3-pro-preview';
 
     const contents = [
       {
@@ -298,7 +321,7 @@ app.post('/quick-generate', upload.fields([
       const candidate = response.candidates[0];
       if (candidate.content && candidate.content.parts) {
         for (const part of candidate.content.parts) {
-          if (part.inlineData) { // Исправлено: fileData → inlineData
+          if (part.inlineData) {
             const imageData = Buffer.from(part.inlineData.data, 'base64');
             
             const resultDir = 'results/';
@@ -373,4 +396,5 @@ function cleanupFiles(filePaths) {
 app.listen(PORT, () => {
   console.log(`🚀 Сервер запущен на порту ${PORT}`);
   console.log(`📧 Откройте http://localhost:${PORT} в браузере`);
+  console.log(`🤖 Используется модель: gemini-3-pro-preview`);
 });

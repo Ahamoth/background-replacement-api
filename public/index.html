@@ -16,6 +16,7 @@
             --primary-dark: #4f46e5;
             --secondary: #10b981;
             --warning: #f59e0b;
+            --danger: #ef4444;
             --dark: #1f2937;
             --darker: #111827;
             --light: #f8fafc;
@@ -59,6 +60,7 @@
         .subtitle {
             color: var(--gray);
             font-size: 1.1rem;
+            margin-bottom: 2rem;
         }
 
         /* Переключатель режимов */
@@ -130,7 +132,7 @@
             gap: 0.5rem;
         }
 
-        /* Стили для одиночного режима */
+        /* Стили для режимов */
         .single-mode { display: block; }
         .batch-mode { display: none; }
 
@@ -226,6 +228,77 @@
             display: block;
         }
 
+        /* Стили для дополнительных объектов */
+        .additional-objects {
+            margin-top: 1rem;
+        }
+
+        .add-object-btn {
+            background: rgba(99, 102, 241, 0.2);
+            border: 2px dashed var(--primary);
+            border-radius: 12px;
+            padding: 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: var(--primary);
+            font-weight: 600;
+            margin-top: 1rem;
+        }
+
+        .add-object-btn:hover {
+            background: rgba(99, 102, 241, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .object-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-top: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .object-preview {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .object-info {
+            flex: 1;
+        }
+
+        .object-name {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+
+        .object-size {
+            font-size: 0.8rem;
+            color: var(--gray);
+        }
+
+        .remove-object {
+            background: rgba(239, 68, 68, 0.2);
+            border: none;
+            border-radius: 6px;
+            padding: 0.5rem;
+            color: #ef4444;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .remove-object:hover {
+            background: rgba(239, 68, 68, 0.3);
+        }
+
+        /* Сетка объектов для пакетного режима */
         .objects-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
@@ -243,6 +316,7 @@
             border: 1px solid var(--border);
         }
 
+        /* Счетчики */
         .objects-counter {
             background: var(--primary);
             color: white;
@@ -271,7 +345,7 @@
 
         .progress-header {
             display: flex;
-            justify-content: between;
+            justify-content: space-between;
             align-items: center;
             margin-bottom: 1rem;
         }
@@ -339,7 +413,7 @@
         }
 
         .result-thumb.error {
-            border-color: #ef4444;
+            border-color: var(--danger);
         }
 
         .result-name {
@@ -348,6 +422,7 @@
             word-break: break-all;
         }
 
+        /* Формы */
         .form-group {
             margin-bottom: 1.5rem;
         }
@@ -388,6 +463,7 @@
             gap: 1rem;
         }
 
+        /* Кнопки */
         .generate-btn {
             width: 100%;
             padding: 1.25rem;
@@ -428,6 +504,7 @@
             transform: none;
         }
 
+        /* Результаты */
         .result-placeholder {
             background: rgba(255, 255, 255, 0.03);
             border: 2px dashed var(--border);
@@ -471,6 +548,7 @@
             box-shadow: 0 10px 25px rgba(245, 158, 11, 0.3);
         }
 
+        /* Загрузка */
         .loading {
             display: none;
             text-align: center;
@@ -492,6 +570,7 @@
             100% { transform: rotate(360deg); }
         }
 
+        /* Алерты */
         .alert {
             padding: 1rem;
             border-radius: 12px;
@@ -517,6 +596,7 @@
             margin-top: 0.5rem;
         }
 
+        /* Фичи */
         .features {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -797,17 +877,20 @@
     </div>
 
     <script>
+        // Глобальные переменные
         let additionalObjects = [];
         let objectCounter = 0;
         let batchObjects = [];
         let currentMode = 'single';
 
-        // Переключение режимов
+        // ========== ПЕРЕКЛЮЧЕНИЕ РЕЖИМОВ ==========
         function switchMode(mode) {
             currentMode = mode;
             
             // Обновляем активную кнопку
-            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
             event.target.classList.add('active');
             
             // Переключаем видимость секций
@@ -854,10 +937,16 @@
 
         function addObject(file) {
             if (!file) return;
+
             const reader = new FileReader();
             reader.onload = function(e) {
                 const objectId = `object_${objectCounter++}`;
-                const object = { id: objectId, file: file, preview: e.target.result };
+                const object = {
+                    id: objectId,
+                    file: file,
+                    preview: e.target.result
+                };
+                
                 additionalObjects.push(object);
                 renderAdditionalObjects();
                 updateObjectsCounter();
@@ -874,6 +963,7 @@
         function renderAdditionalObjects() {
             const container = document.getElementById('additionalObjectsList');
             container.innerHTML = '';
+
             additionalObjects.forEach(object => {
                 const objectElement = document.createElement('div');
                 objectElement.className = 'object-item';
@@ -925,11 +1015,68 @@
             counter.textContent = batchObjects.length;
         }
 
-        // ========== ГЕНЕРАЦИЯ ==========
+        // ========== ГЕНЕРАЦИЯ ОДИНОЧНОГО ИЗОБРАЖЕНИЯ ==========
         async function generateImage() {
-            // ... существующий код для одиночной генерации ...
+            const objectInput = document.getElementById('objectInput');
+            const backgroundInput = document.getElementById('backgroundInput');
+            const prompt = document.getElementById('prompt').value;
+            const quality = document.getElementById('quality').value;
+            const imageSize = document.getElementById('imageSize').value;
+
+            if (!objectInput.files[0] && additionalObjects.length === 0) {
+                showAlert('Пожалуйста, загрузите хотя бы один объект', 'error');
+                return;
+            }
+
+            if (!backgroundInput.files[0]) {
+                showAlert('Пожалуйста, загрузите фон', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            
+            // Основной объект
+            if (objectInput.files[0]) {
+                formData.append('objectImage', objectInput.files[0]);
+            }
+            
+            // Дополнительные объекты
+            additionalObjects.forEach((object, index) => {
+                formData.append(`additionalObject${index}`, object.file);
+            });
+            
+            formData.append('backgroundImage', backgroundInput.files[0]);
+            formData.append('prompt', prompt);
+            formData.append('quality', quality);
+            formData.append('imageSize', imageSize);
+            formData.append('totalObjects', (objectInput.files[0] ? 1 : 0) + additionalObjects.length);
+
+            showLoading(true);
+            hideAlerts();
+            hideResult();
+
+            try {
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showResult(result);
+                    showAlert('✅ Изображение успешно создано!', 'success');
+                } else {
+                    showAlert(`❌ Ошибка: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showAlert(`❌ Ошибка сети: ${error.message}`, 'error');
+            } finally {
+                showLoading(false);
+            }
         }
 
+        // ========== ПАКЕТНАЯ ГЕНЕРАЦИЯ ==========
         async function generateBatch() {
             const backgroundInput = document.getElementById('batchBackgroundInput');
             const prompt = document.getElementById('prompt').value;
@@ -982,6 +1129,28 @@
             }
         }
 
+        // ========== ОТОБРАЖЕНИЕ РЕЗУЛЬТАТОВ ==========
+        function showResult(result) {
+            const resultImage = document.getElementById('resultImage');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const resultPlaceholder = document.getElementById('resultPlaceholder');
+            
+            resultImage.src = result.imageUrl;
+            resultImage.style.display = 'block';
+            resultPlaceholder.style.display = 'none';
+            
+            downloadBtn.href = result.imageUrl;
+            downloadBtn.download = result.filename;
+            downloadBtn.style.display = 'block';
+            downloadBtn.innerHTML = `<span>💾</span> Скачать ${result.resolution}`;
+        }
+
+        function hideResult() {
+            document.getElementById('resultImage').style.display = 'none';
+            document.getElementById('downloadBtn').style.display = 'none';
+            document.getElementById('resultPlaceholder').style.display = 'block';
+        }
+
         function showBatchResults(result) {
             const resultsContainer = document.getElementById('batchResults');
             const resultsGrid = document.getElementById('resultsGrid');
@@ -1027,6 +1196,15 @@
             document.getElementById('batchResultPlaceholder').style.display = 'block';
         }
 
+        // ========== УПРАВЛЕНИЕ СОСТОЯНИЕМ ==========
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+            document.getElementById('generateBtn').disabled = show;
+            document.getElementById('generateBtn').innerHTML = show ? 
+                '<span>⏳</span> Генерация...' : 
+                '<span>🚀</span> Сгенерировать композит';
+        }
+
         function showBatchLoading(show) {
             const btn = document.getElementById('generateBatchBtn');
             btn.disabled = show;
@@ -1035,6 +1213,10 @@
                 '<span>🚀</span> Начать пакетную обработку';
                 
             document.getElementById('progressContainer').style.display = show ? 'block' : 'none';
+            
+            if (show) {
+                updateProgress(0, batchObjects.length, 'Подготовка...', 0);
+            }
         }
 
         function updateProgress(processed, total, currentFile, errors) {
@@ -1048,4 +1230,93 @@
             document.getElementById('currentFile').textContent = currentFile || 'Обработка...';
         }
 
-        // Остальные функции (showResult, hideResult, showLoading, showAlert, hideAlerts) оста
+        function showAlert(message, type) {
+            const alert = document.getElementById(type === 'success' ? 'successAlert' : 'errorAlert');
+            alert.textContent = message;
+            alert.style.display = 'block';
+            
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 5000);
+        }
+
+        function hideAlerts() {
+            document.getElementById('successAlert').style.display = 'none';
+            document.getElementById('errorAlert').style.display = 'none';
+        }
+
+        // ========== DRAG & DROP ==========
+        function initializeDragAndDrop() {
+            // Для одиночного режима
+            document.querySelectorAll('.upload-box').forEach(box => {
+                if (!box.classList.contains('batch-objects')) {
+                    box.addEventListener('dragover', (e) => {
+                        e.preventDefault();
+                        box.style.borderColor = 'var(--primary)';
+                        box.style.background = 'rgba(99, 102, 241, 0.1)';
+                    });
+
+                    box.addEventListener('dragleave', (e) => {
+                        e.preventDefault();
+                        box.style.borderColor = 'var(--border)';
+                        box.style.background = 'rgba(255, 255, 255, 0.02)';
+                    });
+
+                    box.addEventListener('drop', (e) => {
+                        e.preventDefault();
+                        box.style.borderColor = 'var(--border)';
+                        box.style.background = 'rgba(255, 255, 255, 0.02)';
+                        
+                        const files = e.dataTransfer.files;
+                        if (files.length > 0) {
+                            if (box.querySelector('.upload-icon').textContent === '📷') {
+                                document.getElementById('objectInput').files = files;
+                                const event = new Event('change');
+                                document.getElementById('objectInput').dispatchEvent(event);
+                            } else {
+                                document.getElementById('backgroundInput').files = files;
+                                const event = new Event('change');
+                                document.getElementById('backgroundInput').dispatchEvent(event);
+                            }
+                        }
+                    });
+                }
+            });
+
+            // Для пакетного режима
+            document.querySelector('.batch-objects').addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.currentTarget.style.borderColor = 'var(--warning)';
+                e.currentTarget.style.background = 'rgba(245, 158, 11, 0.1)';
+            });
+
+            document.querySelector('.batch-objects').addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                e.currentTarget.style.borderColor = 'var(--border)';
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
+            });
+
+            document.querySelector('.batch-objects').addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.currentTarget.style.borderColor = 'var(--border)';
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleBatchObjects(files);
+                }
+            });
+        }
+
+        // ========== ИНИЦИАЛИЗАЦИЯ ==========
+        function initialize() {
+            updateObjectsCounter();
+            updateBatchCounter();
+            initializeDragAndDrop();
+        }
+
+        // Запуск инициализации при загрузке страницы
+        document.addEventListener('DOMContentLoaded', initialize);
+    </script>
+</body>
+</html>

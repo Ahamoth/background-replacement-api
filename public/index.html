@@ -2,157 +2,153 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Gemini 3 Image Composer</title>
+<title>Gemini 3 Pro Image Composer</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
 body {
-    font-family: Arial, sans-serif;
     background: #eef1f5;
-    padding: 30px;
+    font-family: Arial, sans-serif;
+    padding: 40px;
 }
 .container {
-    max-width: 1200px;
+    max-width: 1100px;
     margin: auto;
-    background: white;
+    background: #fff;
     padding: 25px;
-    border-radius: 14px;
-    box-shadow: 0 5px 25px rgba(0,0,0,0.1);
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.15);
 }
-.upload-box {
-    padding: 20px;
+h1 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+.upload {
     border: 2px dashed #4a90e2;
+    padding: 20px;
     text-align: center;
     cursor: pointer;
     border-radius: 10px;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
 }
 .preview {
-    max-height: 220px;
-    display: none;
+    max-width: 260px;
     border-radius: 10px;
+    display: none;
     margin-top: 10px;
 }
-textarea {
-    width: 100%;
-    padding: 15px;
-    border-radius: 10px;
-    border: 2px solid #ddd;
-}
-select, button {
-    width: 100%;
-    padding: 15px;
-    margin-top: 15px;
-    border-radius: 10px;
-    border: none;
-}
 button {
-    background: #4a90e2;
-    color: white;
+    background: #2979ff;
+    color: #fff;
+    border: 0;
+    padding: 17px;
+    border-radius: 10px;
+    width: 100%;
     font-size: 18px;
     cursor: pointer;
-}
-button:hover {
-    transform: scale(1.02);
-}
-.result-image {
-    max-width: 100%;
-    display: none;
-    border-radius: 12px;
     margin-top: 20px;
+}
+button:hover { opacity: .9; }
+select, textarea {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: 2px solid #ddd;
+    margin-top: 10px;
+}
+.result-img {
+    max-width: 100%;
+    margin-top: 20px;
+    display: none;
+    border-radius: 14px;
+}
+#downloadBtn {
+    display: none;
+    background: #ff5252;
+    text-decoration: none;
+    padding: 15px;
+    color: white;
+    border-radius: 10px;
+    margin-top: 20px;
+    text-align: center;
+    font-size: 18px;
 }
 </style>
 </head>
 
 <body>
-
 <div class="container">
-    <h1>🎨 Gemini 3 Pro — Image Composer</h1>
-    <p>Создание реалистичных композитов с поддержкой <b>gemini-3-pro-preview</b></p>
 
-    <h3>🖼 Загрузите изображения</h3>
+    <h1>🎨 Gemini 3 Pro Image Composer</h1>
 
-    <div class="upload-box" onclick="objectInput.click()">
-        <p>📷 Нажмите чтобы загрузить объект</p>
-        <img id="objectPreview" class="preview">
+    <div class="upload" onclick="objInput.click()">
+        Загрузить объект
+        <img id="objPreview" class="preview">
     </div>
-    <input type="file" id="objectInput" accept="image/*" style="display:none" onchange="preview(event,'objectPreview')">
+    <input type="file" id="objInput" accept="image/*" style="display:none"
+           onchange="preview(event,'objPreview')">
 
-    <div class="upload-box" onclick="backgroundInput.click()">
-        <p>🏞 Нажмите чтобы загрузить фон</p>
-        <img id="backgroundPreview" class="preview">
+    <div class="upload" onclick="bgInput.click()">
+        Загрузить фон
+        <img id="bgPreview" class="preview">
     </div>
-    <input type="file" id="backgroundInput" accept="image/*" style="display:none" onchange="preview(event,'backgroundPreview')">
+    <input type="file" id="bgInput" accept="image/*" style="display:none"
+           onchange="preview(event,'bgPreview')">
 
-    <h3>✏️ Промт</h3>
-    <textarea id="prompt" placeholder="Опишите как нужно встроить объект в фон..."></textarea>
+    <label>Промт:</label>
+    <textarea id="prompt" placeholder="Опишите как встроить объект в фон..." rows="5"></textarea>
 
-    <h3>⚙ Настройки</h3>
-    <label>Thinking Level</label>
-    <select id="thinkingLevel">
-        <option value="HIGH">HIGH</option>
-        <option value="MEDIUM">MEDIUM</option>
-        <option value="LOW">LOW</option>
-    </select>
-
-    <label>Media Resolution</label>
-    <select id="mediaResolution">
-        <option value="MEDIA_RESOLUTION_HIGH">HIGH</option>
-        <option value="MEDIA_RESOLUTION_MEDIUM">MEDIUM</option>
-        <option value="MEDIA_RESOLUTION_LOW">LOW</option>
-    </select>
-
-    <label>Output Quality</label>
+    <label>Выходное разрешение:</label>
     <select id="quality">
         <option value="1k">1K</option>
         <option value="2k" selected>2K</option>
         <option value="4k">4K</option>
     </select>
 
-    <button onclick="generate()">🚀 Создать изображение</button>
+    <label>Размер обработки в модели:</label>
+    <select id="imageSize">
+        <option value="1K">1K</option>
+        <option value="2K" selected>2K</option>
+        <option value="4K">4K</option>
+    </select>
 
-    <img id="resultImage" class="result-image">
-    <a id="downloadBtn" style="display:none" class="download-btn" download>💾 Скачать</a>
+    <button onclick="generate()">🚀 Сгенерировать</button>
+
+    <img id="resultImage" class="result-img">
+    <a id="downloadBtn">💾 Скачать результат</a>
+
 </div>
 
 <script>
-function preview(event, id) {
+function preview(e, id) {
     const img = document.getElementById(id);
-    img.src = URL.createObjectURL(event.target.files[0]);
+    img.src = URL.createObjectURL(e.target.files[0]);
     img.style.display = "block";
 }
 
 async function generate() {
-    const objectFile = objectInput.files[0];
-    const backgroundFile = backgroundInput.files[0];
-
-    if (!objectFile || !backgroundFile) {
-        alert("Загрузите оба изображения!");
-        return;
-    }
+    const obj = objInput.files[0];
+    const bg = bgInput.files[0];
+    if (!obj || !bg) return alert("Загрузите оба изображения");
 
     const fd = new FormData();
-    fd.append("objectImage", objectFile);
-    fd.append("backgroundImage", backgroundFile);
+    fd.append("objectImage", obj);
+    fd.append("backgroundImage", bg);
     fd.append("prompt", document.getElementById("prompt").value);
-    fd.append("thinkingLevel", document.getElementById("thinkingLevel").value);
-    fd.append("mediaResolution", document.getElementById("mediaResolution").value);
     fd.append("quality", document.getElementById("quality").value);
+    fd.append("imageSize", document.getElementById("imageSize").value);
 
-    const result = await fetch("/generate", { method: "POST", body: fd });
-    const data = await result.json();
+    const req = await fetch("/generate", { method: "POST", body: fd });
+    const data = await req.json();
 
-    if (!data.success) {
-        alert("Ошибка: " + data.error);
-        return;
-    }
+    if (!data.success) return alert("Ошибка: " + data.error);
 
     resultImage.src = data.imageUrl;
     resultImage.style.display = "block";
 
     downloadBtn.href = data.imageUrl;
     downloadBtn.download = data.filename;
-    downloadBtn.style.display = "inline-block";
+    downloadBtn.style.display = "block";
 }
 </script>
 

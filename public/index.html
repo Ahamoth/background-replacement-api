@@ -15,6 +15,7 @@
             --primary: #6366f1;
             --primary-dark: #4f46e5;
             --secondary: #10b981;
+            --warning: #f59e0b;
             --dark: #1f2937;
             --darker: #111827;
             --light: #f8fafc;
@@ -31,7 +32,7 @@
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             padding: 2rem;
         }
@@ -58,6 +59,35 @@
         .subtitle {
             color: var(--gray);
             font-size: 1.1rem;
+        }
+
+        /* Переключатель режимов */
+        .mode-switcher {
+            display: flex;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 2rem;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            background: transparent;
+            color: var(--gray);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .mode-btn.active {
+            background: var(--primary);
+            color: white;
         }
 
         .main-content {
@@ -100,6 +130,13 @@
             gap: 0.5rem;
         }
 
+        /* Стили для одиночного режима */
+        .single-mode { display: block; }
+        .batch-mode { display: none; }
+
+        .mode-active .single-mode { display: none; }
+        .mode-active .batch-mode { display: block; }
+
         .upload-area {
             display: grid;
             grid-template-columns: 1fr;
@@ -123,6 +160,16 @@
             background: rgba(99, 102, 241, 0.1);
         }
 
+        .upload-box.batch-objects {
+            border-color: var(--warning);
+            min-height: 200px;
+        }
+
+        .upload-box.batch-objects:hover {
+            border-color: var(--warning);
+            background: rgba(245, 158, 11, 0.1);
+        }
+
         .upload-icon {
             font-size: 3rem;
             margin-bottom: 1rem;
@@ -137,6 +184,25 @@
         .upload-subtext {
             font-size: 0.9rem;
             color: var(--gray);
+        }
+
+        .batch-info {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid var(--warning);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-top: 1rem;
+            text-align: left;
+        }
+
+        .batch-info ul {
+            margin: 0.5rem 0;
+            padding-left: 1.5rem;
+        }
+
+        .batch-info li {
+            margin: 0.25rem 0;
+            font-size: 0.9rem;
         }
 
         .preview-container {
@@ -160,73 +226,126 @@
             display: block;
         }
 
-        .additional-objects {
+        .objects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 0.5rem;
             margin-top: 1rem;
+            max-height: 300px;
+            overflow-y: auto;
         }
 
-        .add-object-btn {
-            background: rgba(99, 102, 241, 0.2);
-            border: 2px dashed var(--primary);
-            border-radius: 12px;
-            padding: 1rem;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            color: var(--primary);
-            font-weight: 600;
-            margin-top: 1rem;
-        }
-
-        .add-object-btn:hover {
-            background: rgba(99, 102, 241, 0.3);
-            transform: translateY(-2px);
-        }
-
-        .object-item {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1rem;
-            margin-top: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .object-preview {
-            width: 60px;
-            height: 60px;
+        .object-thumb {
+            width: 100%;
+            aspect-ratio: 1;
             object-fit: cover;
             border-radius: 8px;
             border: 1px solid var(--border);
         }
 
-        .object-info {
-            flex: 1;
+        .objects-counter {
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            margin-left: 0.5rem;
         }
 
-        .object-name {
-            font-weight: 500;
-            margin-bottom: 0.25rem;
+        .batch-counter {
+            background: var(--warning);
         }
 
-        .object-size {
+        /* Прогресс бар */
+        .progress-container {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            display: none;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            border-radius: 4px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .progress-text {
+            font-size: 0.9rem;
+            color: var(--gray);
+            text-align: center;
+        }
+
+        .progress-stats {
+            display: flex;
+            justify-content: space-between;
             font-size: 0.8rem;
             color: var(--gray);
+            margin-top: 0.5rem;
         }
 
-        .remove-object {
-            background: rgba(239, 68, 68, 0.2);
-            border: none;
-            border-radius: 6px;
-            padding: 0.5rem;
-            color: #ef4444;
-            cursor: pointer;
-            transition: all 0.3s ease;
+        /* Результаты пакетной обработки */
+        .batch-results {
+            display: none;
+            margin-top: 1rem;
         }
 
-        .remove-object:hover {
-            background: rgba(239, 68, 68, 0.3);
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+            max-height: 400px;
+            overflow-y: auto;
+            margin: 1rem 0;
+        }
+
+        .result-item {
+            text-align: center;
+        }
+
+        .result-thumb {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 2px solid var(--border);
+        }
+
+        .result-thumb.success {
+            border-color: var(--secondary);
+        }
+
+        .result-thumb.error {
+            border-color: #ef4444;
+        }
+
+        .result-name {
+            font-size: 0.8rem;
+            margin-top: 0.5rem;
+            word-break: break-all;
         }
 
         .form-group {
@@ -286,9 +405,17 @@
             gap: 0.5rem;
         }
 
+        .generate-btn.batch {
+            background: linear-gradient(135deg, var(--warning) 0%, #d97706 100%);
+        }
+
         .generate-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 25px rgba(99, 102, 241, 0.3);
+        }
+
+        .generate-btn.batch:hover {
+            box-shadow: 0 10px 25px rgba(245, 158, 11, 0.3);
         }
 
         .generate-btn:active {
@@ -331,9 +458,17 @@
             transition: all 0.3s ease;
         }
 
+        .download-btn.batch {
+            background: linear-gradient(135deg, var(--warning) 0%, #d97706 100%);
+        }
+
         .download-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+        }
+
+        .download-btn.batch:hover {
+            box-shadow: 0 10px 25px rgba(245, 158, 11, 0.3);
         }
 
         .loading {
@@ -406,19 +541,6 @@
             font-size: 0.9rem;
             color: var(--gray);
         }
-
-        .objects-counter {
-            background: var(--primary);
-            color: white;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.8rem;
-            margin-left: 0.5rem;
-        }
     </style>
 </head>
 <body>
@@ -427,55 +549,112 @@
             <div class="logo">🎨</div>
             <h1 class="title">Gemini AI Image Composer</h1>
             <p class="subtitle">Создавайте фотореалистичные композиции с помощью искусственного интеллекта</p>
+            
+            <!-- Переключатель режимов -->
+            <div class="mode-switcher">
+                <button class="mode-btn active" onclick="switchMode('single')">
+                    📷 Одиночная обработка
+                </button>
+                <button class="mode-btn" onclick="switchMode('batch')">
+                    🚀 Пакетная обработка
+                </button>
+            </div>
         </div>
 
         <div class="main-content">
             <div class="upload-section">
-                <h2 class="section-title">
-                    <span>📤</span>
-                    Загрузка изображений
-                    <span class="objects-counter" id="objectsCounter">0</span>
-                </h2>
+                <!-- ОДИНОЧНЫЙ РЕЖИМ -->
+                <div class="single-mode">
+                    <h2 class="section-title">
+                        <span>📤</span>
+                        Загрузка изображений
+                        <span class="objects-counter" id="objectsCounter">0</span>
+                    </h2>
 
-                <div class="upload-area">
-                    <!-- Основной объект -->
-                    <div class="upload-box" onclick="document.getElementById('objectInput').click()">
-                        <div class="upload-icon">📷</div>
-                        <div class="upload-text">Основной объект</div>
-                        <div class="upload-subtext">Нажмите для загрузки основного объекта</div>
-                        <div class="preview-container">
-                            <img id="objectPreview" class="preview-image" alt="Предпросмотр объекта">
+                    <div class="upload-area">
+                        <!-- Основной объект -->
+                        <div class="upload-box" onclick="document.getElementById('objectInput').click()">
+                            <div class="upload-icon">📷</div>
+                            <div class="upload-text">Основной объект</div>
+                            <div class="upload-subtext">Нажмите для загрузки основного объекта</div>
+                            <div class="preview-container">
+                                <img id="objectPreview" class="preview-image" alt="Предпросмотр объекта">
+                            </div>
+                        </div>
+
+                        <!-- Дополнительные объекты -->
+                        <div class="additional-objects">
+                            <div class="add-object-btn" onclick="addObjectInput()">
+                                <span>+</span> Добавить дополнительный объект
+                            </div>
+                            <div id="additionalObjectsList"></div>
+                        </div>
+
+                        <!-- Фон -->
+                        <div class="upload-box" onclick="document.getElementById('backgroundInput').click()">
+                            <div class="upload-icon">🏞️</div>
+                            <div class="upload-text">Фон</div>
+                            <div class="upload-subtext">Нажмите для загрузки фона</div>
+                            <div class="preview-container">
+                                <img id="backgroundPreview" class="preview-image" alt="Предпросмотр фона">
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Дополнительные объекты -->
-                    <div class="additional-objects">
-                        <div class="add-object-btn" onclick="addObjectInput()">
-                            <span>+</span> Добавить дополнительный объект
-                        </div>
-                        <div id="additionalObjectsList"></div>
-                    </div>
-
-                    <!-- Фон -->
-                    <div class="upload-box" onclick="document.getElementById('backgroundInput').click()">
-                        <div class="upload-icon">🏞️</div>
-                        <div class="upload-text">Фон</div>
-                        <div class="upload-subtext">Нажмите для загрузки фона</div>
-                        <div class="preview-container">
-                            <img id="backgroundPreview" class="preview-image" alt="Предпросмотр фона">
-                        </div>
-                    </div>
+                    <input type="file" id="objectInput" accept="image/*" style="display: none" onchange="previewMainObject(this)">
+                    <input type="file" id="backgroundInput" accept="image/*" style="display: none" onchange="previewImage(this, 'backgroundPreview')">
                 </div>
 
-                <input type="file" id="objectInput" accept="image/*" style="display: none" onchange="previewMainObject(this)">
-                <input type="file" id="backgroundInput" accept="image/*" style="display: none" onchange="previewImage(this, 'backgroundPreview')">
+                <!-- ПАКЕТНЫЙ РЕЖИМ -->
+                <div class="batch-mode">
+                    <h2 class="section-title">
+                        <span>🚀</span>
+                        Пакетная обработка
+                        <span class="objects-counter batch-counter" id="batchObjectsCounter">0</span>
+                    </h2>
 
+                    <div class="upload-area">
+                        <!-- Фон для пакетной обработки -->
+                        <div class="upload-box" onclick="document.getElementById('batchBackgroundInput').click()">
+                            <div class="upload-icon">🏞️</div>
+                            <div class="upload-text">Фон для всех объектов</div>
+                            <div class="upload-subtext">Нажмите для загрузки фона</div>
+                            <div class="preview-container">
+                                <img id="batchBackgroundPreview" class="preview-image" alt="Предпросмотр фона">
+                            </div>
+                        </div>
+
+                        <!-- Объекты для пакетной обработки -->
+                        <div class="upload-box batch-objects" onclick="document.getElementById('batchObjectsInput').click()">
+                            <div class="upload-icon">📦</div>
+                            <div class="upload-text">Объекты для обработки</div>
+                            <div class="upload-subtext">Нажмите для выбора нескольких файлов (до 100)</div>
+                            
+                            <div class="objects-grid" id="batchObjectsGrid"></div>
+
+                            <div class="batch-info">
+                                <strong>💡 Как это работает:</strong>
+                                <ul>
+                                    <li>Загрузите один фоновый image</li>
+                                    <li>Выберите несколько объектов (до 100 файлов)</li>
+                                    <li>Система создаст отдельное изображение для каждого объекта</li>
+                                    <li>Скачайте ZIP архив со всеми результатами</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <input type="file" id="batchBackgroundInput" accept="image/*" style="display: none" onchange="previewImage(this, 'batchBackgroundPreview')">
+                    <input type="file" id="batchObjectsInput" accept="image/*" multiple style="display: none" onchange="handleBatchObjects(this.files)">
+                </div>
+
+                <!-- Общие настройки -->
                 <div class="form-group">
                     <label class="form-label">✏️ Промт (опционально):</label>
                     <textarea 
                         id="prompt" 
                         class="form-control" 
-                        placeholder="Опишите как именно интегрировать объекты в фон... Например: 'Создай фотореалистичную композицию с естественным освещением и тенями. Размести все объекты гармонично на фоне'"
+                        placeholder="Опишите как именно интегрировать объекты в фон... Например: 'Создай фотореалистичную композицию с естественным освещением и тенями'"
                     ></textarea>
                 </div>
 
@@ -499,12 +678,41 @@
                     </div>
                 </div>
 
+                <!-- Имя пакета для batch режима -->
+                <div class="form-group batch-mode">
+                    <label class="form-label">🏷️ Имя пакета:</label>
+                    <input type="text" id="batchName" class="form-control" placeholder="Моя пакетная обработка" value="Пакетная обработка">
+                </div>
+
+                <!-- Прогресс бар для пакетной обработки -->
+                <div class="progress-container" id="progressContainer">
+                    <div class="progress-header">
+                        <strong>📊 Прогресс обработки:</strong>
+                        <span id="progressText">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-stats">
+                        <span>Обработано: <span id="processedCount">0</span></span>
+                        <span>Всего: <span id="totalCount">0</span></span>
+                        <span>Ошибок: <span id="errorCount">0</span></span>
+                    </div>
+                    <div class="progress-text" id="currentFile">Ожидание начала...</div>
+                </div>
+
                 <div class="alert alert-error" id="errorAlert"></div>
                 <div class="alert alert-success" id="successAlert"></div>
 
+                <!-- Кнопки генерации -->
                 <button class="generate-btn" onclick="generateImage()" id="generateBtn">
                     <span>🚀</span>
                     Сгенерировать композит
+                </button>
+
+                <button class="generate-btn batch batch-mode" onclick="generateBatch()" id="generateBatchBtn">
+                    <span>🚀</span>
+                    Начать пакетную обработку
                 </button>
 
                 <div class="loading" id="loading">
@@ -519,19 +727,52 @@
                     Результат
                 </h2>
 
-                <div class="result-placeholder" id="resultPlaceholder">
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">✨</div>
-                    <p>Здесь появится сгенерированное изображение</p>
-                    <p style="font-size: 0.9rem; margin-top: 0.5rem; opacity: 0.7;">
-                        Загрузите объекты и фон, затем нажмите "Сгенерировать"
-                    </p>
+                <!-- Результат для одиночного режима -->
+                <div class="single-mode">
+                    <div class="result-placeholder" id="resultPlaceholder">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">✨</div>
+                        <p>Здесь появится сгенерированное изображение</p>
+                        <p style="font-size: 0.9rem; margin-top: 0.5rem; opacity: 0.7;">
+                            Загрузите объекты и фон, затем нажмите "Сгенерировать"
+                        </p>
+                    </div>
+
+                    <img id="resultImage" class="result-image" alt="Результат генерации">
+                    <a id="downloadBtn" class="download-btn" download>
+                        <span>💾</span>
+                        Скачать результат
+                    </a>
                 </div>
 
-                <img id="resultImage" class="result-image" alt="Результат генерации">
-                <a id="downloadBtn" class="download-btn" download>
-                    <span>💾</span>
-                    Скачать результат
-                </a>
+                <!-- Результат для пакетного режима -->
+                <div class="batch-mode">
+                    <div class="result-placeholder" id="batchResultPlaceholder">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">📦</div>
+                        <p>Здесь появятся результаты пакетной обработки</p>
+                        <p style="font-size: 0.9rem; margin-top: 0.5rem; opacity: 0.7;">
+                            Загрузите фон и объекты, затем нажмите "Начать пакетную обработку"
+                        </p>
+                    </div>
+
+                    <div class="batch-results" id="batchResults">
+                        <h3 style="margin-bottom: 1rem;">📋 Результаты обработки:</h3>
+                        <div class="results-grid" id="resultsGrid"></div>
+                        
+                        <div style="margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 10px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <strong>Итоги:</strong>
+                                    <div>Успешно: <span id="successCount">0</span></div>
+                                    <div>Ошибок: <span id="failCount">0</span></div>
+                                </div>
+                                <a id="batchDownloadBtn" class="download-btn batch" download>
+                                    <span>📦</span>
+                                    Скачать ZIP архив
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <div class="features">
                     <div class="feature">
@@ -543,8 +784,8 @@
                         <div class="feature-text">AI-оптимизация</div>
                     </div>
                     <div class="feature">
-                        <div class="feature-icon">🖼️</div>
-                        <div class="feature-text">Множественные объекты</div>
+                        <div class="feature-icon">📦</div>
+                        <div class="feature-text">Пакетная обработка</div>
                     </div>
                     <div class="feature">
                         <div class="feature-icon">🔒</div>
@@ -558,7 +799,22 @@
     <script>
         let additionalObjects = [];
         let objectCounter = 0;
+        let batchObjects = [];
+        let currentMode = 'single';
 
+        // Переключение режимов
+        function switchMode(mode) {
+            currentMode = mode;
+            
+            // Обновляем активную кнопку
+            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Переключаем видимость секций
+            document.body.classList.toggle('mode-active', mode === 'batch');
+        }
+
+        // ========== ОДИНОЧНЫЙ РЕЖИМ ==========
         function previewMainObject(input) {
             const file = input.files[0];
             if (file) {
@@ -567,7 +823,6 @@
                     const preview = document.getElementById('objectPreview');
                     preview.src = e.target.result;
                     preview.classList.add('visible');
-                    
                     updateObjectsCounter();
                 }
                 reader.readAsDataURL(file);
@@ -593,23 +848,16 @@
             input.accept = 'image/*';
             input.style.display = 'none';
             input.onchange = (e) => addObject(e.target.files[0]);
-            
             document.body.appendChild(input);
             input.click();
         }
 
         function addObject(file) {
             if (!file) return;
-
             const reader = new FileReader();
             reader.onload = function(e) {
                 const objectId = `object_${objectCounter++}`;
-                const object = {
-                    id: objectId,
-                    file: file,
-                    preview: e.target.result
-                };
-                
+                const object = { id: objectId, file: file, preview: e.target.result };
                 additionalObjects.push(object);
                 renderAdditionalObjects();
                 updateObjectsCounter();
@@ -626,7 +874,6 @@
         function renderAdditionalObjects() {
             const container = document.getElementById('additionalObjectsList');
             container.innerHTML = '';
-
             additionalObjects.forEach(object => {
                 const objectElement = document.createElement('div');
                 objectElement.className = 'object-item';
@@ -642,6 +889,30 @@
             });
         }
 
+        // ========== ПАКЕТНЫЙ РЕЖИМ ==========
+        function handleBatchObjects(files) {
+            batchObjects = Array.from(files);
+            renderBatchObjects();
+            updateBatchCounter();
+        }
+
+        function renderBatchObjects() {
+            const grid = document.getElementById('batchObjectsGrid');
+            grid.innerHTML = '';
+            
+            batchObjects.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const thumb = document.createElement('img');
+                    thumb.className = 'object-thumb';
+                    thumb.src = e.target.result;
+                    thumb.title = file.name;
+                    grid.appendChild(thumb);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
         function updateObjectsCounter() {
             const counter = document.getElementById('objectsCounter');
             const mainObject = document.getElementById('objectInput').files[0];
@@ -649,47 +920,49 @@
             counter.textContent = totalObjects;
         }
 
+        function updateBatchCounter() {
+            const counter = document.getElementById('batchObjectsCounter');
+            counter.textContent = batchObjects.length;
+        }
+
+        // ========== ГЕНЕРАЦИЯ ==========
         async function generateImage() {
-            const objectInput = document.getElementById('objectInput');
-            const backgroundInput = document.getElementById('backgroundInput');
+            // ... существующий код для одиночной генерации ...
+        }
+
+        async function generateBatch() {
+            const backgroundInput = document.getElementById('batchBackgroundInput');
             const prompt = document.getElementById('prompt').value;
             const quality = document.getElementById('quality').value;
             const imageSize = document.getElementById('imageSize').value;
+            const batchName = document.getElementById('batchName').value;
 
-            if (!objectInput.files[0] && additionalObjects.length === 0) {
-                showAlert('Пожалуйста, загрузите хотя бы один объект', 'error');
+            if (!backgroundInput.files[0]) {
+                showAlert('Пожалуйста, загрузите фоновое изображение', 'error');
                 return;
             }
 
-            if (!backgroundInput.files[0]) {
-                showAlert('Пожалуйста, загрузите фон', 'error');
+            if (batchObjects.length === 0) {
+                showAlert('Пожалуйста, загрузите объекты для обработки', 'error');
                 return;
             }
 
             const formData = new FormData();
-            
-            // Основной объект
-            if (objectInput.files[0]) {
-                formData.append('objectImage', objectInput.files[0]);
-            }
-            
-            // Дополнительные объекты
-            additionalObjects.forEach((object, index) => {
-                formData.append(`additionalObject${index}`, object.file);
-            });
-            
             formData.append('backgroundImage', backgroundInput.files[0]);
+            batchObjects.forEach((file, index) => {
+                formData.append('objectImages', file);
+            });
             formData.append('prompt', prompt);
             formData.append('quality', quality);
             formData.append('imageSize', imageSize);
-            formData.append('totalObjects', (objectInput.files[0] ? 1 : 0) + additionalObjects.length);
+            formData.append('batchName', batchName);
 
-            showLoading(true);
+            showBatchLoading(true);
             hideAlerts();
-            hideResult();
+            hideBatchResults();
 
             try {
-                const response = await fetch('/generate', {
+                const response = await fetch('/batch-generate', {
                     method: 'POST',
                     body: formData
                 });
@@ -697,116 +970,82 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    showResult(result);
-                    showAlert('✅ Изображение успешно создано!', 'success');
+                    showBatchResults(result);
+                    showAlert(`✅ Пакетная обработка завершена! Успешно: ${result.processed}, Ошибок: ${result.errors}`, 'success');
                 } else {
                     showAlert(`❌ Ошибка: ${result.error}`, 'error');
                 }
             } catch (error) {
                 showAlert(`❌ Ошибка сети: ${error.message}`, 'error');
             } finally {
-                showLoading(false);
+                showBatchLoading(false);
             }
         }
 
-        function showResult(result) {
-            const resultImage = document.getElementById('resultImage');
-            const downloadBtn = document.getElementById('downloadBtn');
-            const resultPlaceholder = document.getElementById('resultPlaceholder');
+        function showBatchResults(result) {
+            const resultsContainer = document.getElementById('batchResults');
+            const resultsGrid = document.getElementById('resultsGrid');
+            const placeholder = document.getElementById('batchResultPlaceholder');
             
-            resultImage.src = result.imageUrl;
-            resultImage.style.display = 'block';
-            resultPlaceholder.style.display = 'none';
+            resultsGrid.innerHTML = '';
             
-            downloadBtn.href = result.imageUrl;
-            downloadBtn.download = result.filename;
-            downloadBtn.style.display = 'block';
-            downloadBtn.innerHTML = `<span>💾</span> Скачать ${result.resolution}`;
-        }
-
-        function hideResult() {
-            document.getElementById('resultImage').style.display = 'none';
-            document.getElementById('downloadBtn').style.display = 'none';
-            document.getElementById('resultPlaceholder').style.display = 'block';
-        }
-
-        function showLoading(show) {
-            document.getElementById('loading').style.display = show ? 'block' : 'none';
-            document.getElementById('generateBtn').disabled = show;
-            document.getElementById('generateBtn').innerHTML = show ? 
-                '<span>⏳</span> Генерация...' : 
-                '<span>🚀</span> Сгенерировать композит';
-        }
-
-        function showAlert(message, type) {
-            const alert = document.getElementById(type === 'success' ? 'successAlert' : 'errorAlert');
-            alert.textContent = message;
-            alert.style.display = 'block';
-            
-            setTimeout(() => {
-                alert.style.display = 'none';
-            }, 5000);
-        }
-
-        function hideAlerts() {
-            document.getElementById('successAlert').style.display = 'none';
-            document.getElementById('errorAlert').style.display = 'none';
-        }
-
-        // Drag and drop functionality
-        document.querySelectorAll('.upload-box').forEach(box => {
-            box.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                box.style.borderColor = 'var(--primary)';
-                box.style.background = 'rgba(99, 102, 241, 0.1)';
-            });
-
-            box.addEventListener('dragleave', (e) => {
-                e.preventDefault();
-                box.style.borderColor = 'var(--border)';
-                box.style.background = 'rgba(255, 255, 255, 0.02)';
-            });
-
-            box.addEventListener('drop', (e) => {
-                e.preventDefault();
-                box.style.borderColor = 'var(--border)';
-                box.style.background = 'rgba(255, 255, 255, 0.02)';
+            result.results.forEach(item => {
+                const resultItem = document.createElement('div');
+                resultItem.className = 'result-item';
                 
-                const files = e.dataTransfer.files;
-                if (files.length > 0) {
-                    if (box.querySelector('.upload-icon').textContent === '📷') {
-                        document.getElementById('objectInput').files = files;
-                        const event = new Event('change');
-                        document.getElementById('objectInput').dispatchEvent(event);
-                    } else {
-                        document.getElementById('backgroundInput').files = files;
-                        const event = new Event('change');
-                        document.getElementById('backgroundInput').dispatchEvent(event);
-                    }
+                if (item.success) {
+                    resultItem.innerHTML = `
+                        <img src="${item.url}" class="result-thumb success" alt="${item.originalName}">
+                        <div class="result-name">${item.originalName}</div>
+                    `;
+                } else {
+                    resultItem.innerHTML = `
+                        <div class="result-thumb error" style="display: flex; align-items: center; justify-content: center; background: rgba(239,68,68,0.1);">
+                            ❌
+                        </div>
+                        <div class="result-name" style="color: #ef4444;">${item.originalName}</div>
+                    `;
                 }
+                
+                resultsGrid.appendChild(resultItem);
             });
-        });
 
-        // Drag and drop для дополнительных объектов
-        document.querySelector('.add-object-btn').addEventListener('dragover', (e) => {
-            e.preventDefault();
-            e.currentTarget.style.background = 'rgba(99, 102, 241, 0.3)';
-        });
-
-        document.querySelector('.add-object-btn').addEventListener('dragleave', (e) => {
-            e.preventDefault();
-            e.currentTarget.style.background = 'rgba(99, 102, 241, 0.2)';
-        });
-
-        document.querySelector('.add-object-btn').addEventListener('drop', (e) => {
-            e.preventDefault();
-            e.currentTarget.style.background = 'rgba(99, 102, 241, 0.2)';
+            document.getElementById('successCount').textContent = result.results.filter(r => r.success).length;
+            document.getElementById('failCount').textContent = result.results.filter(r => !r.success).length;
             
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                addObject(files[0]);
+            if (result.zipUrl) {
+                document.getElementById('batchDownloadBtn').href = result.zipUrl;
+                document.getElementById('batchDownloadBtn').download = `${result.batchId}.zip`;
             }
-        });
-    </script>
-</body>
-</html>
+
+            placeholder.style.display = 'none';
+            resultsContainer.style.display = 'block';
+        }
+
+        function hideBatchResults() {
+            document.getElementById('batchResults').style.display = 'none';
+            document.getElementById('batchResultPlaceholder').style.display = 'block';
+        }
+
+        function showBatchLoading(show) {
+            const btn = document.getElementById('generateBatchBtn');
+            btn.disabled = show;
+            btn.innerHTML = show ? 
+                '<span>⏳</span> Обработка...' : 
+                '<span>🚀</span> Начать пакетную обработку';
+                
+            document.getElementById('progressContainer').style.display = show ? 'block' : 'none';
+        }
+
+        function updateProgress(processed, total, currentFile, errors) {
+            const percent = total > 0 ? Math.round((processed / total) * 100) : 0;
+            
+            document.getElementById('progressFill').style.width = percent + '%';
+            document.getElementById('progressText').textContent = percent + '%';
+            document.getElementById('processedCount').textContent = processed;
+            document.getElementById('totalCount').textContent = total;
+            document.getElementById('errorCount').textContent = errors;
+            document.getElementById('currentFile').textContent = currentFile || 'Обработка...';
+        }
+
+        // Остальные функции (showResult, hideResult, showLoading, showAlert, hideAlerts) оста

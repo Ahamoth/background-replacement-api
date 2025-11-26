@@ -39,11 +39,6 @@
             margin-bottom: 10px;
         }
 
-        .header p {
-            opacity: 0.9;
-            font-size: 1.1em;
-        }
-
         .content {
             padding: 40px;
             display: grid;
@@ -84,12 +79,6 @@
         .upload-area:hover {
             border-color: #2980b9;
             background: #f1f8ff;
-        }
-
-        .upload-area i {
-            font-size: 3em;
-            color: #3498db;
-            margin-bottom: 10px;
         }
 
         .file-input {
@@ -141,30 +130,22 @@
             font-family: inherit;
         }
 
-        .quality-selector {
+        .config-selector {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-top: 10px;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
         }
 
-        .quality-option {
-            padding: 15px;
-            text-align: center;
+        .select-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .select-group select {
+            padding: 12px;
             border: 2px solid #dee2e6;
             border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .quality-option:hover {
-            border-color: #3498db;
-        }
-
-        .quality-option.selected {
-            border-color: #3498db;
-            background: #3498db;
-            color: white;
+            font-size: 1em;
         }
 
         .btn {
@@ -183,10 +164,6 @@
         .btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 20px rgba(52, 152, 219, 0.3);
-        }
-
-        .btn-quick {
-            background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
         }
 
         .result-section {
@@ -283,25 +260,33 @@
                 <input type="file" id="backgroundInput" class="file-input" accept="image/*" onchange="previewImage(this, 'backgroundPreview')">
 
                 <div class="form-group">
-                    <label for="prompt">✏️ Промт (опционально):</label>
+                    <label for="prompt">✏️ Промт:</label>
                     <textarea id="prompt" placeholder="Опишите как именно нужно интегрировать объект в фон..."></textarea>
                 </div>
 
                 <div class="form-group">
-                    <label>🎯 Качество результата:</label>
-                    <div class="quality-selector">
-                        <div class="quality-option selected" data-quality="1k">1K (1024×1024)</div>
-                        <div class="quality-option" data-quality="2k">2K (2048×2048)</div>
-                        <div class="quality-option" data-quality="4k">4K (4096×4096)</div>
+                    <label>⚙️ Настройки генерации:</label>
+                    <div class="config-selector">
+                        <div class="select-group">
+                            <label for="thinkingLevel">Thinking Level:</label>
+                            <select id="thinkingLevel">
+                                <option value="HIGH">HIGH</option>
+                                <option value="LOW">LOW</option>
+                            </select>
+                        </div>
+                        <div class="select-group">
+                            <label for="mediaResolution">Media Resolution:</label>
+                            <select id="mediaResolution">
+                                <option value="MEDIA_RESOLUTION_HIGH">HIGH</option>
+                                <option value="MEDIA_RESOLUTION_MEDIUM">MEDIUM</option>
+                                <option value="MEDIA_RESOLUTION_LOW">LOW</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
                 <button class="btn" onclick="generateImage()">
                     🚀 Создать композит
-                </button>
-
-                <button class="btn btn-quick" onclick="quickGenerate()">
-                    ⚡ Быстрая генерация
                 </button>
             </div>
 
@@ -326,19 +311,6 @@
     </div>
 
     <script>
-        let selectedQuality = '1k';
-
-        // Инициализация выбора качества
-        document.querySelectorAll('.quality-option').forEach(option => {
-            option.addEventListener('click', function() {
-                document.querySelectorAll('.quality-option').forEach(opt => {
-                    opt.classList.remove('selected');
-                });
-                this.classList.add('selected');
-                selectedQuality = this.dataset.quality;
-            });
-        });
-
         function previewImage(input, previewId) {
             const file = input.files[0];
             if (file) {
@@ -354,17 +326,11 @@
         }
 
         async function generateImage() {
-            await processGeneration('/generate');
-        }
-
-        async function quickGenerate() {
-            await processGeneration('/quick-generate');
-        }
-
-        async function processGeneration(endpoint) {
             const objectInput = document.getElementById('objectInput');
             const backgroundInput = document.getElementById('backgroundInput');
             const prompt = document.getElementById('prompt').value;
+            const thinkingLevel = document.getElementById('thinkingLevel').value;
+            const mediaResolution = document.getElementById('mediaResolution').value;
 
             if (!objectInput.files[0] || !backgroundInput.files[0]) {
                 showAlert('Пожалуйста, загрузите оба изображения', 'error');
@@ -375,14 +341,15 @@
             formData.append('objectImage', objectInput.files[0]);
             formData.append('backgroundImage', backgroundInput.files[0]);
             formData.append('prompt', prompt);
-            formData.append('quality', selectedQuality);
+            formData.append('thinkingLevel', thinkingLevel);
+            formData.append('mediaResolution', mediaResolution);
 
             showLoading(true);
             hideAlerts();
             hideResult();
 
             try {
-                const response = await fetch(endpoint, {
+                const response = await fetch('/generate', {
                     method: 'POST',
                     body: formData
                 });
@@ -400,7 +367,7 @@
                     downloadBtn.download = result.filename;
                     downloadBtn.style.display = 'block';
                     
-                    showAlert(`✅ Изображение успешно создано! Разрешение: ${result.resolution}`, 'success');
+                    showAlert(`✅ Изображение успешно создано!`, 'success');
                 } else {
                     showAlert(`❌ Ошибка: ${result.error}`, 'error');
                 }

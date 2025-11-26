@@ -102,15 +102,9 @@
 
         .upload-area {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr;
             gap: 1.5rem;
             margin-bottom: 2rem;
-        }
-
-        @media (max-width: 768px) {
-            .upload-area {
-                grid-template-columns: 1fr;
-            }
         }
 
         .upload-box {
@@ -121,6 +115,7 @@
             cursor: pointer;
             transition: all 0.3s ease;
             background: rgba(255, 255, 255, 0.02);
+            position: relative;
         }
 
         .upload-box:hover {
@@ -146,15 +141,92 @@
 
         .preview-container {
             margin-top: 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: center;
         }
 
         .preview-image {
-            width: 100%;
-            max-height: 200px;
-            object-fit: contain;
+            width: 120px;
+            height: 120px;
+            object-fit: cover;
             border-radius: 10px;
             border: 1px solid var(--border);
             display: none;
+        }
+
+        .preview-image.visible {
+            display: block;
+        }
+
+        .additional-objects {
+            margin-top: 1rem;
+        }
+
+        .add-object-btn {
+            background: rgba(99, 102, 241, 0.2);
+            border: 2px dashed var(--primary);
+            border-radius: 12px;
+            padding: 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: var(--primary);
+            font-weight: 600;
+            margin-top: 1rem;
+        }
+
+        .add-object-btn:hover {
+            background: rgba(99, 102, 241, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .object-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-top: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .object-preview {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .object-info {
+            flex: 1;
+        }
+
+        .object-name {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+
+        .object-size {
+            font-size: 0.8rem;
+            color: var(--gray);
+        }
+
+        .remove-object {
+            background: rgba(239, 68, 68, 0.2);
+            border: none;
+            border-radius: 6px;
+            padding: 0.5rem;
+            color: #ef4444;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .remove-object:hover {
+            background: rgba(239, 68, 68, 0.3);
         }
 
         .form-group {
@@ -334,6 +406,19 @@
             font-size: 0.9rem;
             color: var(--gray);
         }
+
+        .objects-counter {
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            margin-left: 0.5rem;
+        }
     </style>
 </head>
 <body>
@@ -349,29 +434,40 @@
                 <h2 class="section-title">
                     <span>📤</span>
                     Загрузка изображений
+                    <span class="objects-counter" id="objectsCounter">0</span>
                 </h2>
 
                 <div class="upload-area">
+                    <!-- Основной объект -->
                     <div class="upload-box" onclick="document.getElementById('objectInput').click()">
                         <div class="upload-icon">📷</div>
-                        <div class="upload-text">Объект</div>
-                        <div class="upload-subtext">Нажмите для загрузки</div>
+                        <div class="upload-text">Основной объект</div>
+                        <div class="upload-subtext">Нажмите для загрузки основного объекта</div>
                         <div class="preview-container">
                             <img id="objectPreview" class="preview-image" alt="Предпросмотр объекта">
                         </div>
                     </div>
 
+                    <!-- Дополнительные объекты -->
+                    <div class="additional-objects">
+                        <div class="add-object-btn" onclick="addObjectInput()">
+                            <span>+</span> Добавить дополнительный объект
+                        </div>
+                        <div id="additionalObjectsList"></div>
+                    </div>
+
+                    <!-- Фон -->
                     <div class="upload-box" onclick="document.getElementById('backgroundInput').click()">
                         <div class="upload-icon">🏞️</div>
                         <div class="upload-text">Фон</div>
-                        <div class="upload-subtext">Нажмите для загрузки</div>
+                        <div class="upload-subtext">Нажмите для загрузки фона</div>
                         <div class="preview-container">
                             <img id="backgroundPreview" class="preview-image" alt="Предпросмотр фона">
                         </div>
                     </div>
                 </div>
 
-                <input type="file" id="objectInput" accept="image/*" style="display: none" onchange="previewImage(this, 'objectPreview')">
+                <input type="file" id="objectInput" accept="image/*" style="display: none" onchange="previewMainObject(this)">
                 <input type="file" id="backgroundInput" accept="image/*" style="display: none" onchange="previewImage(this, 'backgroundPreview')">
 
                 <div class="form-group">
@@ -379,7 +475,7 @@
                     <textarea 
                         id="prompt" 
                         class="form-control" 
-                        placeholder="Опишите как именно интегрировать объект в фон... Например: 'Создай фотореалистичную композицию с естественным освещением и тенями'"
+                        placeholder="Опишите как именно интегрировать объекты в фон... Например: 'Создай фотореалистичную композицию с естественным освещением и тенями. Размести все объекты гармонично на фоне'"
                     ></textarea>
                 </div>
 
@@ -427,7 +523,7 @@
                     <div style="font-size: 3rem; margin-bottom: 1rem;">✨</div>
                     <p>Здесь появится сгенерированное изображение</p>
                     <p style="font-size: 0.9rem; margin-top: 0.5rem; opacity: 0.7;">
-                        Загрузите объект и фон, затем нажмите "Сгенерировать"
+                        Загрузите объекты и фон, затем нажмите "Сгенерировать"
                     </p>
                 </div>
 
@@ -448,7 +544,7 @@
                     </div>
                     <div class="feature">
                         <div class="feature-icon">🖼️</div>
-                        <div class="feature-text">Высокое разрешение</div>
+                        <div class="feature-text">Множественные объекты</div>
                     </div>
                     <div class="feature">
                         <div class="feature-icon">🔒</div>
@@ -460,6 +556,24 @@
     </div>
 
     <script>
+        let additionalObjects = [];
+        let objectCounter = 0;
+
+        function previewMainObject(input) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById('objectPreview');
+                    preview.src = e.target.result;
+                    preview.classList.add('visible');
+                    
+                    updateObjectsCounter();
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
         function previewImage(input, previewId) {
             const file = input.files[0];
             if (file) {
@@ -467,22 +581,72 @@
                 reader.onload = function(e) {
                     const preview = document.getElementById(previewId);
                     preview.src = e.target.result;
-                    preview.style.display = 'block';
-                    
-                    // Показываем информацию о файле
-                    const uploadBox = preview.closest('.upload-box');
-                    const existingInfo = uploadBox.querySelector('.file-info');
-                    if (existingInfo) {
-                        existingInfo.remove();
-                    }
-                    
-                    const fileInfo = document.createElement('div');
-                    fileInfo.className = 'file-info';
-                    fileInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
-                    uploadBox.appendChild(fileInfo);
+                    preview.classList.add('visible');
                 }
                 reader.readAsDataURL(file);
             }
+        }
+
+        function addObjectInput() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.style.display = 'none';
+            input.onchange = (e) => addObject(e.target.files[0]);
+            
+            document.body.appendChild(input);
+            input.click();
+        }
+
+        function addObject(file) {
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const objectId = `object_${objectCounter++}`;
+                const object = {
+                    id: objectId,
+                    file: file,
+                    preview: e.target.result
+                };
+                
+                additionalObjects.push(object);
+                renderAdditionalObjects();
+                updateObjectsCounter();
+            }
+            reader.readAsDataURL(file);
+        }
+
+        function removeObject(objectId) {
+            additionalObjects = additionalObjects.filter(obj => obj.id !== objectId);
+            renderAdditionalObjects();
+            updateObjectsCounter();
+        }
+
+        function renderAdditionalObjects() {
+            const container = document.getElementById('additionalObjectsList');
+            container.innerHTML = '';
+
+            additionalObjects.forEach(object => {
+                const objectElement = document.createElement('div');
+                objectElement.className = 'object-item';
+                objectElement.innerHTML = `
+                    <img src="${object.preview}" class="object-preview" alt="Объект">
+                    <div class="object-info">
+                        <div class="object-name">${object.file.name}</div>
+                        <div class="object-size">${(object.file.size / 1024 / 1024).toFixed(2)} MB</div>
+                    </div>
+                    <button class="remove-object" onclick="removeObject('${object.id}')">🗑️</button>
+                `;
+                container.appendChild(objectElement);
+            });
+        }
+
+        function updateObjectsCounter() {
+            const counter = document.getElementById('objectsCounter');
+            const mainObject = document.getElementById('objectInput').files[0];
+            const totalObjects = (mainObject ? 1 : 0) + additionalObjects.length;
+            counter.textContent = totalObjects;
         }
 
         async function generateImage() {
@@ -492,17 +656,33 @@
             const quality = document.getElementById('quality').value;
             const imageSize = document.getElementById('imageSize').value;
 
-            if (!objectInput.files[0] || !backgroundInput.files[0]) {
-                showAlert('Пожалуйста, загрузите оба изображения', 'error');
+            if (!objectInput.files[0] && additionalObjects.length === 0) {
+                showAlert('Пожалуйста, загрузите хотя бы один объект', 'error');
+                return;
+            }
+
+            if (!backgroundInput.files[0]) {
+                showAlert('Пожалуйста, загрузите фон', 'error');
                 return;
             }
 
             const formData = new FormData();
-            formData.append('objectImage', objectInput.files[0]);
+            
+            // Основной объект
+            if (objectInput.files[0]) {
+                formData.append('objectImage', objectInput.files[0]);
+            }
+            
+            // Дополнительные объекты
+            additionalObjects.forEach((object, index) => {
+                formData.append(`additionalObject${index}`, object.file);
+            });
+            
             formData.append('backgroundImage', backgroundInput.files[0]);
             formData.append('prompt', prompt);
             formData.append('quality', quality);
             formData.append('imageSize', imageSize);
+            formData.append('totalObjects', (objectInput.files[0] ? 1 : 0) + additionalObjects.length);
 
             showLoading(true);
             hideAlerts();
@@ -563,7 +743,6 @@
             alert.textContent = message;
             alert.style.display = 'block';
             
-            // Автоматически скрыть через 5 секунд
             setTimeout(() => {
                 alert.style.display = 'none';
             }, 5000);
@@ -595,14 +774,38 @@
                 
                 const files = e.dataTransfer.files;
                 if (files.length > 0) {
-                    const input = box.querySelector('.upload-icon').textContent === '📷' ? 
-                                document.getElementById('objectInput') : 
-                                document.getElementById('backgroundInput');
-                    input.files = files;
-                    const event = new Event('change');
-                    input.dispatchEvent(event);
+                    if (box.querySelector('.upload-icon').textContent === '📷') {
+                        document.getElementById('objectInput').files = files;
+                        const event = new Event('change');
+                        document.getElementById('objectInput').dispatchEvent(event);
+                    } else {
+                        document.getElementById('backgroundInput').files = files;
+                        const event = new Event('change');
+                        document.getElementById('backgroundInput').dispatchEvent(event);
+                    }
                 }
             });
+        });
+
+        // Drag and drop для дополнительных объектов
+        document.querySelector('.add-object-btn').addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.currentTarget.style.background = 'rgba(99, 102, 241, 0.3)';
+        });
+
+        document.querySelector('.add-object-btn').addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.currentTarget.style.background = 'rgba(99, 102, 241, 0.2)';
+        });
+
+        document.querySelector('.add-object-btn').addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.currentTarget.style.background = 'rgba(99, 102, 241, 0.2)';
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                addObject(files[0]);
+            }
         });
     </script>
 </body>

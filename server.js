@@ -23,7 +23,7 @@ const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadDir = 'uploads/';
     if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir);
+      fs.mkdirSync(uploadDir, { recursive: true });
     }
     cb(null, uploadDir);
   },
@@ -79,14 +79,18 @@ app.post('/generate', upload.fields([
   { name: 'objectImage', maxCount: 1 },
   { name: 'backgroundImage', maxCount: 1 }
 ]), async (req, res) => {
+  let objectImage, backgroundImage;
+  
   try {
     const { prompt, quality } = req.body;
-    const objectImage = req.files['objectImage'][0];
-    const backgroundImage = req.files['backgroundImage'][0];
-
-    if (!objectImage || !backgroundImage) {
+    
+    // Проверка наличия файлов
+    if (!req.files || !req.files['objectImage'] || !req.files['backgroundImage']) {
       return res.status(400).json({ error: 'Оба изображения обязательны' });
     }
+    
+    objectImage = req.files['objectImage'][0];
+    backgroundImage = req.files['backgroundImage'][0];
 
     console.log('🚀 Начинаем генерацию...');
     console.log('📷 Объект:', objectImage.filename);
@@ -98,7 +102,7 @@ app.post('/generate', upload.fields([
       mediaResolution: 'MEDIA_RESOLUTION_HIGH',
     };
 
-    const model = 'gemini-3-pro-preview';
+    const model = 'gemini-2.0-flash-exp';
 
     const defaultPrompt = `
 Create a photorealistic composite by perfectly integrating the object from the first image 
@@ -162,46 +166,39 @@ Return ONLY the final composite image with maximum realism and no text descripti
       const candidate = response.candidates[0];
       if (candidate.content && candidate.content.parts) {
         for (const part of candidate.content.parts) {
-          if (part.fileData) {
-            const imageData = Buffer.from(part.fileData.data, 'base64');
+          if (part.inlineData) { // Исправлено: fileData → inlineData
+            const imageData = Buffer.from(part.inlineData.data, 'base64');
             
-            // Сохраняем оригинальный результат
+            // Сохраняем результат
             const resultDir = 'results/';
             if (!fs.existsSync(resultDir)) {
-              fs.mkdirSync(resultDir);
+              fs.mkdirSync(resultDir, { recursive: true });
             }
             
             const timestamp = Date.now();
-            const originalFilename = `result-${timestamp}.png`;
-            const originalPath = path.join(resultDir, originalFilename);
-            
-            fs.writeFileSync(originalPath, imageData);
+            const resolution = getResolution(quality);
+            const filename = `result-${timestamp}-${quality}.png`;
+            const filePath = path.join(resultDir, filename);
             
             // Обрабатываем изображение согласно выбранному качеству
-            const resolution = getResolution(quality);
-            const processedFilename = `result-${timestamp}-${quality}.png`;
-            const processedPath = path.join(resultDir, processedFilename);
-            
-            await sharp(originalPath)
+            await sharp(imageData)
               .resize(resolution.width, resolution.height, {
                 fit: 'inside',
                 withoutEnlargement: true
               })
               .png({ quality: 100 })
-              .toFile(processedPath);
+              .toFile(filePath);
             
-            console.log(`✅ Изображение сохранено: ${processedFilename}`);
+            console.log(`✅ Изображение сохранено: ${filename}`);
             console.log(`📐 Размер: ${resolution.width}x${resolution.height}`);
             
             // Очищаем временные файлы
-            fs.unlinkSync(objectImage.path);
-            fs.unlinkSync(backgroundImage.path);
-            fs.unlinkSync(originalPath); // Удаляем оригинальный файл
+            cleanupFiles([objectImage.path, backgroundImage.path]);
             
             return res.json({
               success: true,
-              imageUrl: `/results/${processedFilename}`,
-              filename: processedFilename,
+              imageUrl: `/results/${filename}`,
+              filename: filename,
               resolution: `${resolution.width}x${resolution.height}`
             });
           }
@@ -220,14 +217,11 @@ Return ONLY the final composite image with maximum realism and no text descripti
     console.error('❌ Ошибка:', error.message);
     
     // Очищаем файлы в случае ошибки
-    if (req.files) {
-      Object.values(req.files).forEach(fileArray => {
-        fileArray.forEach(file => {
-          if (fs.existsSync(file.path)) {
-            fs.unlinkSync(file.path);
-          }
-        });
-      });
+    if (objectImage || backgroundImage) {
+      cleanupFiles([
+        objectImage?.path, 
+        backgroundImage?.path
+      ].filter(Boolean));
     }
     
     return res.status(500).json({ 
@@ -253,10 +247,17 @@ app.post('/quick-generate', upload.fields([
   { name: 'objectImage', maxCount: 1 },
   { name: 'backgroundImage', maxCount: 1 }
 ]), async (req, res) => {
+  let objectImage, backgroundImage;
+  
   try {
     const { quality } = req.body;
-    const objectImage = req.files['objectImage'][0];
-    const backgroundImage = req.files['backgroundImage'][0];
+    
+    if (!req.files || !req.files['objectImage'] || !req.files['backgroundImage']) {
+      return res.status(400).json({ error: 'Оба изображения обязательны' });
+    }
+    
+    objectImage = req.files['objectImage'][0];
+    backgroundImage = req.files['backgroundImage'][0];
 
     const simplePrompt = "Put the object from first image into second image with realistic lighting and shadows. Make it photorealistic with perfect shadows and lighting matching.";
 
@@ -264,7 +265,7 @@ app.post('/quick-generate', upload.fields([
       mediaResolution: 'MEDIA_RESOLUTION_HIGH',
     };
 
-    const model = 'gemini-3-pro-preview';
+    const model = 'gemini-2.0-flash-exp';
 
     const contents = [
       {
@@ -297,12 +298,12 @@ app.post('/quick-generate', upload.fields([
       const candidate = response.candidates[0];
       if (candidate.content && candidate.content.parts) {
         for (const part of candidate.content.parts) {
-          if (part.fileData) {
-            const imageData = Buffer.from(part.fileData.data, 'base64');
+          if (part.inlineData) { // Исправлено: fileData → inlineData
+            const imageData = Buffer.from(part.inlineData.data, 'base64');
             
             const resultDir = 'results/';
             if (!fs.existsSync(resultDir)) {
-              fs.mkdirSync(resultDir);
+              fs.mkdirSync(resultDir, { recursive: true });
             }
             
             const timestamp = Date.now();
@@ -319,8 +320,7 @@ app.post('/quick-generate', upload.fields([
               .toFile(filePath);
             
             // Очищаем временные файлы
-            fs.unlinkSync(objectImage.path);
-            fs.unlinkSync(backgroundImage.path);
+            cleanupFiles([objectImage.path, backgroundImage.path]);
             
             return res.json({
               success: true,
@@ -338,24 +338,34 @@ app.post('/quick-generate', upload.fields([
   } catch (error) {
     console.error('❌ Ошибка быстрой генерации:', error);
     
-    if (req.files) {
-      Object.values(req.files).forEach(fileArray => {
-        fileArray.forEach(file => {
-          if (fs.existsSync(file.path)) {
-            fs.unlinkSync(file.path);
-          }
-        });
-      });
+    if (objectImage || backgroundImage) {
+      cleanupFiles([
+        objectImage?.path, 
+        backgroundImage?.path
+      ].filter(Boolean));
     }
     
     return res.status(500).json({ error: error.message });
   }
 });
 
+// Функция для очистки файлов
+function cleanupFiles(filePaths) {
+  filePaths.forEach(filePath => {
+    if (filePath && fs.existsSync(filePath)) {
+      try {
+        fs.unlinkSync(filePath);
+      } catch (err) {
+        console.warn(`⚠️ Не удалось удалить файл: ${filePath}`, err.message);
+      }
+    }
+  });
+}
+
 // Создаем необходимые директории
 ['public', 'uploads', 'results'].forEach(dir => {
   if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir);
+    fs.mkdirSync(dir, { recursive: true });
   }
 });
 

@@ -69,6 +69,31 @@ function getResolution(quality) {
   return resolutions[quality] || resolutions['2k'];
 }
 
+// Функция для получения конфигурации по качеству
+function getConfig(quality) {
+  const qualityConfigs = {
+    '1k': {
+      thinkingConfig: {
+        thinkingLevel: 'LOW',
+      },
+      mediaResolution: 'MEDIA_RESOLUTION_LOW',
+    },
+    '2k': {
+      thinkingConfig: {
+        thinkingLevel: 'HIGH',
+      },
+      mediaResolution: 'MEDIA_RESOLUTION_MEDIUM',
+    },
+    '4k': {
+      thinkingConfig: {
+        thinkingLevel: 'HIGH',
+      },
+      mediaResolution: 'MEDIA_RESOLUTION_HIGH',
+    }
+  };
+  return qualityConfigs[quality] || qualityConfigs['2k'];
+}
+
 // Основной маршрут
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
@@ -82,7 +107,7 @@ app.post('/generate', upload.fields([
   let objectImage, backgroundImage;
   
   try {
-    const { prompt, quality } = req.body;
+    const { prompt, quality = '2k' } = req.body;
     
     // Проверка наличия файлов
     if (!req.files || !req.files['objectImage'] || !req.files['backgroundImage']) {
@@ -96,16 +121,9 @@ app.post('/generate', upload.fields([
     console.log('📷 Объект:', objectImage.filename);
     console.log('🏞️ Фон:', backgroundImage.filename);
     console.log('🎯 Качество:', quality);
-    console.log('📝 Промт:', prompt || 'используется стандартный');
 
-    // Конфигурация для генерации согласно официальному примеру
-    const config = {
-      thinkingConfig: {
-        thinkingLevel: 'HIGH',
-      },
-      mediaResolution: 'MEDIA_RESOLUTION_HIGH',
-    };
-
+    // Получаем конфигурацию по качеству
+    const config = getConfig(quality);
     const model = 'gemini-3-pro-preview';
 
     const defaultPrompt = `
@@ -133,7 +151,7 @@ Return ONLY the final composite image with maximum realism and no text descripti
 
     const finalPrompt = prompt || defaultPrompt;
 
-    // Подготовка содержимого согласно официальному примеру
+    // Подготовка содержимого
     const contents = [
       {
         role: 'user',
@@ -158,8 +176,8 @@ Return ONLY the final composite image with maximum realism and no text descripti
     ];
 
     console.log('📡 Отправляем запрос к Gemini API...');
+    console.log('⚙️ Конфигурация:', JSON.stringify(config, null, 2));
     
-    // Используем generateContentStream как в официальном примере
     const response = await ai.models.generateContent({
       model,
       config,
@@ -270,7 +288,7 @@ app.post('/quick-generate', upload.fields([
   let objectImage, backgroundImage;
   
   try {
-    const { quality } = req.body;
+    const { quality = '2k' } = req.body;
     
     if (!req.files || !req.files['objectImage'] || !req.files['backgroundImage']) {
       return res.status(400).json({ error: 'Оба изображения обязательны' });
@@ -281,13 +299,8 @@ app.post('/quick-generate', upload.fields([
 
     const simplePrompt = "Put the object from first image into second image with realistic lighting and shadows. Make it photorealistic with perfect shadows and lighting matching. Return only the final composite image.";
 
-    const config = {
-      thinkingConfig: {
-        thinkingLevel: 'HIGH',
-      },
-      mediaResolution: 'MEDIA_RESOLUTION_HIGH',
-    };
-
+    // Получаем конфигурацию по качеству
+    const config = getConfig(quality);
     const model = 'gemini-3-pro-preview';
 
     const contents = [

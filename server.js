@@ -1,376 +1,213 @@
+// ===============================================
+//  SERVER.JS — полностью обновлённая версия
+//  Поддержка: gemini-3-pro-preview + inlineData
+// ===============================================
+
 const express = require('express');
 const multer = require('multer');
-const { GoogleGenAI } = require('@google/genai');
 const path = require('path');
 const fs = require('fs');
 const sharp = require('sharp');
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+// -------------------------
 // Middleware
+// -------------------------
 app.use(express.static('public'));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// Инициализация Google GenAI
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-});
-
-// Настройка multer для загрузки файлов
+// -------------------------
+// Multer upload
+// -------------------------
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = 'uploads/';
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
+    destination: function (req, file, cb) {
+        const dir = 'uploads/';
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        cb(null, dir);
+    },
+    filename: function (req, file, cb) {
+        cb(null, `${Date.now()}-${Math.random()}-${file.originalname}`);
     }
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + '-' + file.originalname);
-  }
 });
+const upload = multer({ storage });
 
-const upload = multer({ 
-  storage: storage,
-  limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB limit
-  }
-});
-
-// Функция для чтения файла в base64
+// -------------------------
+// Utils
+// -------------------------
 function fileToBase64(filePath) {
-  const fileBuffer = fs.readFileSync(filePath);
-  return fileBuffer.toString('base64');
+    return fs.readFileSync(filePath).toString("base64");
 }
 
-// Функция для получения MIME типа файла
 function getMimeType(filePath) {
-  const ext = path.extname(filePath).toLowerCase();
-  const mimeTypes = {
-    '.jpg': 'image/jpeg',
-    '.jpeg': 'image/jpeg',
-    '.png': 'image/png',
-    '.gif': 'image/gif',
-    '.webp': 'image/webp'
-  };
-  return mimeTypes[ext] || 'image/jpeg';
+    const ext = path.extname(filePath).toLowerCase();
+    const map = {
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".png": "image/png",
+        ".webp": "image/webp",
+        ".gif": "image/gif"
+    };
+    return map[ext] || "image/jpeg";
 }
 
-// Функция для получения разрешения по качеству
 function getResolution(quality) {
-  const resolutions = {
-    '1k': { width: 1024, height: 1024 },
-    '2k': { width: 2048, height: 2048 },
-    '4k': { width: 4096, height: 4096 }
-  };
-  return resolutions[quality] || resolutions['2k'];
+    const map = {
+        "1k": { width: 1024, height: 1024 },
+        "2k": { width: 2048, height: 2048 },
+        "4k": { width: 4096, height: 4096 }
+    };
+    return map[quality] || map["2k"];
 }
 
-// Основной маршрут
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+function cleanupFiles(paths) {
+    paths.forEach(p => {
+        if (p && fs.existsSync(p)) fs.unlinkSync(p);
+    });
+}
+
+// -------------------------
+// ROUTES
+// -------------------------
+app.get("/", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// Маршрут для обработки генерации
-app.post('/generate', upload.fields([
-  { name: 'objectImage', maxCount: 1 },
-  { name: 'backgroundImage', maxCount: 1 }
+app.post("/generate", upload.fields([
+    { name: "objectImage", maxCount: 1 },
+    { name: "backgroundImage", maxCount: 1 }
 ]), async (req, res) => {
-  let objectImage, backgroundImage;
-  
-  try {
-    const { prompt, quality } = req.body;
-    
-    // Проверка наличия файлов
-    if (!req.files || !req.files['objectImage'] || !req.files['backgroundImage']) {
-      return res.status(400).json({ error: 'Оба изображения обязательны' });
-    }
-    
-    objectImage = req.files['objectImage'][0];
-    backgroundImage = req.files['backgroundImage'][0];
+    let objectImage = null;
+    let backgroundImage = null;
 
-    console.log('🚀 Начинаем генерацию...');
-    console.log('📷 Объект:', objectImage.filename);
-    console.log('🏞️ Фон:', backgroundImage.filename);
-    console.log('🎯 Качество:', quality);
+    try {
+        const {
+            prompt,
+            thinkingLevel,
+            mediaResolution,
+            quality
+        } = req.body;
 
-    // Конфигурация для генерации
-    const config = {
-      mediaResolution: 'MEDIA_RESOLUTION_HIGH',
-    };
-
-    const model = 'gemini-2.0-flash-exp';
-
-    const defaultPrompt = `
-Create a photorealistic composite by perfectly integrating the object from the first image 
-into the background scene from the second image.
-
-CRITICAL REQUIREMENTS:
-1. PRESERVE the object's original appearance, proportions, and details exactly as shown
-2. Match LIGHTING conditions, color temperature, and light direction from the background scene
-3. Apply physically accurate SHADOWS that match the light source in the background
-4. Maintain proper PERSPECTIVE and scale relative to the background environment
-5. Blend edges seamlessly with natural-looking integration
-6. Adjust COLOR grading to match the background's atmosphere and mood
-7. Add appropriate REFLECTIONS and ambient occlusion effects
-8. Ensure perfect PHOTOREALISM with no visible seams or artificial edges
-
-LIGHTING AND SHADOWS:
-- Analyze the light direction in the background and match shadow direction accordingly
-- Create soft, natural shadows with proper falloff
-- Match shadow intensity and color with the background lighting
-- Add contact shadows where the object touches surfaces
-
-Return ONLY the final composite image with maximum realism and no text description.
-    `;
-
-    const finalPrompt = prompt || defaultPrompt;
-
-    // Подготовка содержимого для GenAI
-    const contents = [
-      {
-        role: 'user',
-        parts: [
-          { text: finalPrompt },
-          {
-            fileData: {
-              mimeType: getMimeType(objectImage.path),
-              data: fileToBase64(objectImage.path)
-            }
-          },
-          {
-            fileData: {
-              mimeType: getMimeType(backgroundImage.path),
-              data: fileToBase64(backgroundImage.path)
-            }
-          }
-        ]
-      }
-    ];
-
-    console.log('📡 Отправляем запрос к Gemini API...');
-    
-    const response = await ai.models.generateContent({
-      model,
-      config,
-      contents,
-    });
-
-    console.log('✅ Запрос успешен!');
-
-    // Обработка ответа
-    if (response.candidates && response.candidates.length > 0) {
-      const candidate = response.candidates[0];
-      if (candidate.content && candidate.content.parts) {
-        for (const part of candidate.content.parts) {
-          if (part.inlineData) { // Исправлено: fileData → inlineData
-            const imageData = Buffer.from(part.inlineData.data, 'base64');
-            
-            // Сохраняем результат
-            const resultDir = 'results/';
-            if (!fs.existsSync(resultDir)) {
-              fs.mkdirSync(resultDir, { recursive: true });
-            }
-            
-            const timestamp = Date.now();
-            const resolution = getResolution(quality);
-            const filename = `result-${timestamp}-${quality}.png`;
-            const filePath = path.join(resultDir, filename);
-            
-            // Обрабатываем изображение согласно выбранному качеству
-            await sharp(imageData)
-              .resize(resolution.width, resolution.height, {
-                fit: 'inside',
-                withoutEnlargement: true
-              })
-              .png({ quality: 100 })
-              .toFile(filePath);
-            
-            console.log(`✅ Изображение сохранено: ${filename}`);
-            console.log(`📐 Размер: ${resolution.width}x${resolution.height}`);
-            
-            // Очищаем временные файлы
-            cleanupFiles([objectImage.path, backgroundImage.path]);
-            
-            return res.json({
-              success: true,
-              imageUrl: `/results/${filename}`,
-              filename: filename,
-              resolution: `${resolution.width}x${resolution.height}`
-            });
-          }
+        // validate files
+        if (!req.files?.objectImage || !req.files?.backgroundImage) {
+            return res.status(400).json({ error: "Оба изображения обязательны" });
         }
-      }
+
+        objectImage = req.files.objectImage[0];
+        backgroundImage = req.files.backgroundImage[0];
+
+        // -------------------------
+        // Gemini 3 Pro model
+        // -------------------------
+        const model = genAI.getGenerativeModel({
+            model: "gemini-3-pro-preview"
+        });
+
+        // -------------------------
+        // Create content
+        // -------------------------
+        const contents = [
+            {
+                role: "user",
+                parts: [
+                    { text: prompt || "Combine the object with the background realistically." },
+                    {
+                        inlineData: {
+                            mimeType: getMimeType(objectImage.path),
+                            data: fileToBase64(objectImage.path)
+                        }
+                    },
+                    {
+                        inlineData: {
+                            mimeType: getMimeType(backgroundImage.path),
+                            data: fileToBase64(backgroundImage.path)
+                        }
+                    }
+                ]
+            }
+        ];
+
+        const generationConfig = {
+            temperature: 0.7,
+            topP: 0.9,
+            mediaResolution: mediaResolution,
+            thinking: thinkingLevel
+        };
+
+        // -------------------------
+        // Send request
+        // -------------------------
+        const result = await model.generateContent({
+            contents,
+            generationConfig
+        });
+
+        const response = result.response;
+
+        if (!response?.candidates?.length) {
+            throw new Error("Gemini не вернул кандидатов");
+        }
+
+        let imageBase64 = null;
+        for (const part of response.candidates[0].content.parts) {
+            if (part.inlineData) {
+                imageBase64 = part.inlineData.data;
+            }
+        }
+
+        if (!imageBase64) {
+            throw new Error("Gemini вернул ответ без изображения");
+        }
+
+        // -------------------------
+        // Save result
+        // -------------------------
+        const resultDir = "results/";
+        if (!fs.existsSync(resultDir)) fs.mkdirSync(resultDir, { recursive: true });
+
+        const resolution = getResolution(quality);
+
+        const filename = `result-${Date.now()}.png`;
+        const filepath = path.join(resultDir, filename);
+
+        await sharp(Buffer.from(imageBase64, "base64"))
+            .resize(resolution.width, resolution.height, { fit: "inside" })
+            .png()
+            .toFile(filepath);
+
+        cleanupFiles([objectImage.path, backgroundImage.path]);
+
+        res.json({
+            success: true,
+            imageUrl: `/results/${filename}`,
+            filename: filename
+        });
+
+    } catch (err) {
+        console.error("❌ Ошибка:", err);
+        cleanupFiles([objectImage?.path, backgroundImage?.path]);
+        res.status(500).json({ error: err.message });
     }
-    
-    // Если нет файла в ответе, проверяем текстовый ответ
-    if (response.text) {
-      console.log('📝 Текстовый ответ:', response.text);
-    }
-    
-    return res.status(500).json({ error: 'В ответе нет изображения' });
-    
-  } catch (error) {
-    console.error('❌ Ошибка:', error.message);
-    
-    // Очищаем файлы в случае ошибки
-    if (objectImage || backgroundImage) {
-      cleanupFiles([
-        objectImage?.path, 
-        backgroundImage?.path
-      ].filter(Boolean));
-    }
-    
-    return res.status(500).json({ 
-      error: `Ошибка при обработке: ${error.message}` 
-    });
-  }
 });
 
-// Маршрут для скачивания результата
 app.get('/results/:filename', (req, res) => {
-  const filename = req.params.filename;
-  const filePath = path.join(__dirname, 'results', filename);
-  
-  if (fs.existsSync(filePath)) {
-    res.download(filePath);
-  } else {
-    res.status(404).json({ error: 'Файл не найден' });
-  }
+    const filePath = path.join(__dirname, 'results', req.params.filename);
+    if (fs.existsSync(filePath)) return res.download(filePath);
+    res.status(404).json({ error: "Файл не найден" });
 });
 
-// Маршрут для быстрой генерации
-app.post('/quick-generate', upload.fields([
-  { name: 'objectImage', maxCount: 1 },
-  { name: 'backgroundImage', maxCount: 1 }
-]), async (req, res) => {
-  let objectImage, backgroundImage;
-  
-  try {
-    const { quality } = req.body;
-    
-    if (!req.files || !req.files['objectImage'] || !req.files['backgroundImage']) {
-      return res.status(400).json({ error: 'Оба изображения обязательны' });
-    }
-    
-    objectImage = req.files['objectImage'][0];
-    backgroundImage = req.files['backgroundImage'][0];
-
-    const simplePrompt = "Put the object from first image into second image with realistic lighting and shadows. Make it photorealistic with perfect shadows and lighting matching.";
-
-    const config = {
-      mediaResolution: 'MEDIA_RESOLUTION_HIGH',
-    };
-
-    const model = 'gemini-2.0-flash-exp';
-
-    const contents = [
-      {
-        role: 'user',
-        parts: [
-          { text: simplePrompt },
-          {
-            fileData: {
-              mimeType: getMimeType(objectImage.path),
-              data: fileToBase64(objectImage.path)
-            }
-          },
-          {
-            fileData: {
-              mimeType: getMimeType(backgroundImage.path),
-              data: fileToBase64(backgroundImage.path)
-            }
-          }
-        ]
-      }
-    ];
-
-    const response = await ai.models.generateContent({
-      model,
-      config,
-      contents,
-    });
-
-    if (response.candidates && response.candidates.length > 0) {
-      const candidate = response.candidates[0];
-      if (candidate.content && candidate.content.parts) {
-        for (const part of candidate.content.parts) {
-          if (part.inlineData) { // Исправлено: fileData → inlineData
-            const imageData = Buffer.from(part.inlineData.data, 'base64');
-            
-            const resultDir = 'results/';
-            if (!fs.existsSync(resultDir)) {
-              fs.mkdirSync(resultDir, { recursive: true });
-            }
-            
-            const timestamp = Date.now();
-            const resolution = getResolution(quality);
-            const filename = `quick-result-${timestamp}-${quality}.png`;
-            const filePath = path.join(resultDir, filename);
-            
-            await sharp(imageData)
-              .resize(resolution.width, resolution.height, {
-                fit: 'inside',
-                withoutEnlargement: true
-              })
-              .png({ quality: 100 })
-              .toFile(filePath);
-            
-            // Очищаем временные файлы
-            cleanupFiles([objectImage.path, backgroundImage.path]);
-            
-            return res.json({
-              success: true,
-              imageUrl: `/results/${filename}`,
-              filename: filename,
-              resolution: `${resolution.width}x${resolution.height}`
-            });
-          }
-        }
-      }
-    }
-    
-    return res.status(500).json({ error: 'Ошибка генерации' });
-    
-  } catch (error) {
-    console.error('❌ Ошибка быстрой генерации:', error);
-    
-    if (objectImage || backgroundImage) {
-      cleanupFiles([
-        objectImage?.path, 
-        backgroundImage?.path
-      ].filter(Boolean));
-    }
-    
-    return res.status(500).json({ error: error.message });
-  }
+// -------------------------
+// Run server
+// -------------------------
+["public", "uploads", "results"].forEach(dir => {
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
 
-// Функция для очистки файлов
-function cleanupFiles(filePaths) {
-  filePaths.forEach(filePath => {
-    if (filePath && fs.existsSync(filePath)) {
-      try {
-        fs.unlinkSync(filePath);
-      } catch (err) {
-        console.warn(`⚠️ Не удалось удалить файл: ${filePath}`, err.message);
-      }
-    }
-  });
-}
-
-// Создаем необходимые директории
-['public', 'uploads', 'results'].forEach(dir => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-});
-
-// Запуск сервера
 app.listen(PORT, () => {
-  console.log(`🚀 Сервер запущен на порту ${PORT}`);
-  console.log(`📧 Откройте http://localhost:${PORT} в браузере`);
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
 });

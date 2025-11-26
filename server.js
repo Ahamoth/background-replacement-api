@@ -1,5 +1,5 @@
 // ==========================================================
-//  SERVER.JS — Полная версия для gemini-3-pro-image-preview
+//  SERVER.JS — Обновленная версия с поддержкой множественных объектов
 // ==========================================================
 
 const express = require("express");
@@ -71,61 +71,67 @@ app.get("/", (req, res) => {
 });
 
 // --------------------------------------------
-// GENERATION ENDPOINT
+// GENERATION ENDPOINT (обновленный для множественных объектов)
 // --------------------------------------------
 app.post(
     "/generate",
-    upload.fields([
-        { name: "objectImage", maxCount: 1 },
-        { name: "backgroundImage", maxCount: 1 }
-    ]),
+    upload.any(), // Изменено на any() для обработки произвольных файлов
     async (req, res) => {
-
-        let obj = null, bg = null;
+        const files = req.files || [];
+        let tempFiles = [];
 
         try {
-            const { prompt, imageSize, quality } = req.body;
+            const { prompt, imageSize, quality, totalObjects } = req.body;
 
-            if (!req.files?.objectImage || !req.files?.backgroundImage) {
-                return res.status(400).json({ error: "Загрузите оба изображения" });
+            // Разделяем файлы на объекты и фон
+            const objectFiles = files.filter(f => f.fieldname.startsWith('objectImage') || f.fieldname.startsWith('additionalObject'));
+            const backgroundFile = files.find(f => f.fieldname === 'backgroundImage');
+
+            if (!objectFiles.length) {
+                return res.status(400).json({ error: "Загрузите хотя бы один объект" });
             }
 
-            obj = req.files.objectImage[0];
-            bg = req.files.backgroundImage[0];
+            if (!backgroundFile) {
+                return res.status(400).json({ error: "Загрузите фоновое изображение" });
+            }
+
+            tempFiles = [...objectFiles.map(f => f.path), backgroundFile.path];
 
             // MODEL
             const model = genAI.getGenerativeModel({
                 model: "gemini-3-pro-image-preview"
             });
 
-            // CONTENT
-            const contents = [
+            // Собираем части контента
+            const parts = [
                 {
-                    role: "user",
-                    parts: [
-                        {
-                            text:
-                                prompt ||
-                                `Composite the first image (object) into the second image (background).
-                                 Make perfect photorealism, shadow matching, lighting alignment, 
-                                 physical perspective, soft edges, realistic color grading.
-                                 Output ONLY the final composite image.`
-                        },
-                        {
-                            inlineData: {
-                                mimeType: getMimeType(obj.path),
-                                data: fileToBase64(obj.path)
-                            }
-                        },
-                        {
-                            inlineData: {
-                                mimeType: getMimeType(bg.path),
-                                data: fileToBase64(bg.path)
-                            }
-                        }
-                    ]
+                    text: prompt || `Composite ${objectFiles.length} object(s) from the provided images into the background image.
+                     Create perfect photorealism with accurate shadows, lighting, perspective, and color grading.
+                     Arrange the objects harmoniously in the scene.
+                     Output ONLY the final composite image.`
                 }
             ];
+
+            // Добавляем изображения объектов
+            objectFiles.forEach(file => {
+                parts.push({
+                    inlineData: {
+                        mimeType: getMimeType(file.path),
+                        data: fileToBase64(file.path)
+                    }
+                });
+            });
+
+            // Добавляем фоновое изображение
+            parts.push({
+                inlineData: {
+                    mimeType: getMimeType(backgroundFile.path),
+                    data: fileToBase64(backgroundFile.path)
+                }
+            });
+
+            // CONTENT
+            const contents = [{ role: "user", parts }];
 
             // CONFIG
             const generationConfig = {
@@ -137,7 +143,7 @@ app.post(
             };
 
             // REQUEST
-            console.log("📡 Запрос в Gemini 3 Pro Image...");
+            console.log(`📡 Запрос в Gemini 3 Pro Image с ${objectFiles.length} объектами...`);
             const result = await model.generateContent({
                 contents,
                 generationConfig
@@ -165,18 +171,19 @@ app.post(
                 .png({ quality: 100 })
                 .toFile(filepath);
 
-            cleanup([obj.path, bg.path]);
+            cleanup(tempFiles);
 
             return res.json({
                 success: true,
                 imageUrl: `/results/${filename}`,
                 filename,
-                resolution: `${R.w}x${R.h}`
+                resolution: `${R.w}x${R.h}`,
+                objectsCount: objectFiles.length
             });
 
         } catch (e) {
             console.error("🔥 Ошибка:", e);
-            cleanup([obj?.path, bg?.path]);
+            cleanup(tempFiles);
             return res.status(500).json({ error: e.message });
         }
     }

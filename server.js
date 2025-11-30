@@ -103,14 +103,25 @@ app.post(
             });
 
             // Собираем части контента
-            const parts = [
-                {
-                    text: prompt || `Composite ${objectFiles.length} object(s) from the provided images into the background image.
-                     Create perfect photorealism with accurate shadows, lighting, perspective, and color grading.
-                     Arrange the objects harmoniously in the scene.
-                     Output ONLY the final composite image.`
-                }
-            ];
+           const defaultPrompt = `Integrate the object from the first image into the background scene while preserving EXACT pose, appearance, and facial expression.
+
+CRITICAL REQUIREMENTS:
+1. PRESERVE the object's original pose, facial expression, and appearance exactly as shown
+2. Apply natural shadows that match the lighting direction in the background
+3. Match lighting conditions and color temperature to the background scene
+4. Maintain perfect perspective and scale relative to the environment
+5. Create realistic contact shadows where the object touches surfaces
+6. Ensure photorealistic integration with no visible seams
+7. DO NOT alter the object's pose, facial features, or body proportions
+
+Return ONLY the final composite image with maximum realism.`;
+
+const parts = [
+    {
+        text: prompt || defaultPrompt
+    },
+    
+];
 
             // Добавляем изображения объектов
             objectFiles.forEach(file => {

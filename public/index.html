@@ -269,6 +269,51 @@
             gap: 1rem;
         }
 
+        .api-key-group {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .key-controls {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 0.75rem;
+        }
+
+        .key-btn {
+            flex: 1;
+            padding: 0.5rem;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .key-btn-clear {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .key-btn-clear:hover {
+            background: rgba(239, 68, 68, 0.3);
+        }
+
+        .key-btn-toggle {
+            background: rgba(99, 102, 241, 0.2);
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+
+        .key-btn-toggle:hover {
+            background: rgba(99, 102, 241, 0.3);
+        }
+
         .generate-btn {
             width: 100%;
             padding: 1.25rem;
@@ -479,6 +524,28 @@
                     ></textarea>
                 </div>
 
+                <div class="api-key-group">
+                    <label class="form-label">🔑 Gemini API Key:</label>
+                    <input 
+                        type="password" 
+                        id="apiKey" 
+                        class="form-control" 
+                        placeholder="Введите ваш Gemini API ключ..."
+                        value=""
+                    >
+                    <div class="file-info">
+                        Ключ сохраняется только в вашем браузере и не отправляется на сервер
+                    </div>
+                    <div class="key-controls">
+                        <button type="button" class="key-btn key-btn-clear" onclick="clearApiKey()">
+                            Очистить ключ
+                        </button>
+                        <button type="button" class="key-btn key-btn-toggle" onclick="toggleApiKeyVisibility()">
+                            Показать/Скрыть
+                        </button>
+                    </div>
+                </div>
+
                 <div class="select-group">
                     <div class="form-group">
                         <label class="form-label">🎯 Качество вывода:</label>
@@ -558,6 +625,18 @@
     <script>
         let additionalObjects = [];
         let objectCounter = 0;
+        let storedApiKey = localStorage.getItem('gemini_api_key') || '';
+
+        // Загрузка сохраненного ключа при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            if (storedApiKey) {
+                document.getElementById('apiKey').value = storedApiKey;
+                showAlert('✅ API ключ загружен из сохраненных данных', 'success');
+                setTimeout(() => {
+                    document.getElementById('successAlert').style.display = 'none';
+                }, 2000);
+            }
+        });
 
         function previewMainObject(input) {
             const file = input.files[0];
@@ -652,6 +731,18 @@
         async function generateImage() {
             const objectInput = document.getElementById('objectInput');
             const backgroundInput = document.getElementById('backgroundInput');
+            const apiKeyInput = document.getElementById('apiKey');
+            const apiKey = apiKeyInput.value.trim();
+            
+            if (!apiKey) {
+                showAlert('Пожалуйста, введите Gemini API ключ', 'error');
+                return;
+            }
+            
+            // Сохраняем ключ в localStorage
+            localStorage.setItem('gemini_api_key', apiKey);
+            storedApiKey = apiKey;
+
             const prompt = document.getElementById('prompt').value;
             const quality = document.getElementById('quality').value;
             const imageSize = document.getElementById('imageSize').value;
@@ -682,6 +773,7 @@
             formData.append('prompt', prompt);
             formData.append('quality', quality);
             formData.append('imageSize', imageSize);
+            formData.append('apiKey', apiKey); // Добавляем API ключ в запрос
             formData.append('totalObjects', (objectInput.files[0] ? 1 : 0) + additionalObjects.length);
 
             showLoading(true);
@@ -706,6 +798,22 @@
                 showAlert(`❌ Ошибка сети: ${error.message}`, 'error');
             } finally {
                 showLoading(false);
+            }
+        }
+
+        function clearApiKey() {
+            localStorage.removeItem('gemini_api_key');
+            document.getElementById('apiKey').value = '';
+            storedApiKey = '';
+            showAlert('✅ API ключ очищен', 'success');
+        }
+
+        function toggleApiKeyVisibility() {
+            const apiKeyInput = document.getElementById('apiKey');
+            if (apiKeyInput.type === 'password') {
+                apiKeyInput.type = 'text';
+            } else {
+                apiKeyInput.type = 'password';
             }
         }
 

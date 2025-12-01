@@ -12,8 +12,6 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
 // --------------------------------------------
 // STATIC + FORM
 // --------------------------------------------
@@ -63,6 +61,14 @@ function cleanup(files) {
     files.forEach(f => f && fs.existsSync(f) && fs.unlinkSync(f));
 }
 
+// Функция для получения экземпляра Gemini AI с переданным ключом
+function getGenAI(apiKey) {
+    if (!apiKey) {
+        throw new Error("API ключ не предоставлен");
+    }
+    return new GoogleGenerativeAI(apiKey);
+}
+
 // --------------------------------------------
 // MAIN PAGE
 // --------------------------------------------
@@ -81,7 +87,15 @@ app.post(
         let tempFiles = [];
 
         try {
-            const { prompt, imageSize, quality, totalObjects } = req.body;
+            const { prompt, imageSize, quality, totalObjects, apiKey } = req.body;
+
+            // Проверяем API ключ
+            if (!apiKey) {
+                return res.status(400).json({ error: "API ключ не предоставлен" });
+            }
+
+            // Инициализируем Gemini AI с переданным ключом
+            const genAI = getGenAI(apiKey);
 
             // Разделяем файлы на объекты и фон
             const objectFiles = files.filter(f => f.fieldname.startsWith('objectImage') || f.fieldname.startsWith('additionalObject'));
@@ -103,7 +117,7 @@ app.post(
             });
 
             // Собираем части контента
-           const defaultPrompt = `Integrate the object from the first image into the background scene while preserving EXACT pose, appearance, and facial expression.
+            const defaultPrompt = `Integrate the object from the first image into the background scene while preserving EXACT pose, appearance, and facial expression.
 
 CRITICAL REQUIREMENTS:
 1. PRESERVE the object's original pose, facial expression, and appearance exactly as shown
@@ -116,12 +130,12 @@ CRITICAL REQUIREMENTS:
 
 Return ONLY the final composite image with maximum realism.`;
 
-const parts = [
-    {
-        text: prompt || defaultPrompt
-    },
-    
-];
+            const parts = [
+                {
+                    text: prompt || defaultPrompt
+                },
+                
+            ];
 
             // Добавляем изображения объектов
             objectFiles.forEach(file => {
